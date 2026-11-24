@@ -7,17 +7,18 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/icon.svg"],
+      includeAssets: ["icons/icon.svg", "icons/icon-maskable.svg"],
       manifest: {
         name: "Small Farmer Super App",
         short_name: "FarmApp",
         description: "Track everything on your farm — crops, livestock, tasks, inventory and money — with an AI assistant.",
-        theme_color: "#2f7d32",
-        background_color: "#f6f8f3",
+        theme_color: "#f2f2f7",
+        background_color: "#f2f2f7",
         display: "standalone",
         start_url: "/",
         icons: [
-          { src: "icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
+          { src: "icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+          { src: "icons/icon-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
         ],
       },
       workbox: {

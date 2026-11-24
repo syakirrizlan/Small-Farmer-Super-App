@@ -3,6 +3,8 @@
  * Each module gets its own IndexedDB table, list page and add/edit form for free.
  * To add a new module (e.g. "Irrigation"), add an entry here and bump the DB version in db.ts.
  */
+import type { IconName } from "../components/Icon";
+
 export type FieldType = "text" | "number" | "date" | "select" | "textarea";
 
 export interface FieldDef {
@@ -17,7 +19,9 @@ export interface FieldDef {
 export interface ModuleDef {
   id: string;
   title: string;
-  icon: string;
+  /** Line icon name (see components/Icon.tsx). */
+  glyph: IconName;
+  /** CSS colour (a token like var(--green)) for the icon tile. */
   color: string;
   description: string;
   titleField: string; // field used as the row headline
@@ -29,8 +33,8 @@ export const MODULES: ModuleDef[] = [
   {
     id: "plots",
     title: "Plots & Fields",
-    icon: "🗺️",
-    color: "#8d6e63",
+    glyph: "map",
+    color: "var(--brown)",
     description: "Land parcels, beds and greenhouses",
     titleField: "name",
     subtitleFields: ["area", "soil"],
@@ -44,8 +48,8 @@ export const MODULES: ModuleDef[] = [
   {
     id: "crops",
     title: "Crops",
-    icon: "🌱",
-    color: "#43a047",
+    glyph: "leaf",
+    color: "var(--green)",
     description: "What is planted, where and when",
     titleField: "name",
     subtitleFields: ["status", "plot", "plantedOn"],
@@ -62,8 +66,8 @@ export const MODULES: ModuleDef[] = [
   {
     id: "livestock",
     title: "Livestock",
-    icon: "🐄",
-    color: "#fb8c00",
+    glyph: "paw",
+    color: "var(--orange)",
     description: "Animals, health and breeding",
     titleField: "tag",
     subtitleFields: ["species", "status"],
@@ -79,8 +83,8 @@ export const MODULES: ModuleDef[] = [
   {
     id: "tasks",
     title: "Tasks",
-    icon: "✅",
-    color: "#1e88e5",
+    glyph: "check",
+    color: "var(--blue)",
     description: "Daily jobs and reminders",
     titleField: "title",
     subtitleFields: ["status", "due"],
@@ -95,8 +99,8 @@ export const MODULES: ModuleDef[] = [
   {
     id: "inventory",
     title: "Inventory",
-    icon: "📦",
-    color: "#6d4c41",
+    glyph: "box",
+    color: "var(--indigo)",
     description: "Seeds, feed, fertiliser, tools",
     titleField: "item",
     subtitleFields: ["quantity", "unit", "category"],
@@ -111,8 +115,8 @@ export const MODULES: ModuleDef[] = [
   {
     id: "finance",
     title: "Money",
-    icon: "💰",
-    color: "#f9a825",
+    glyph: "money",
+    color: "var(--teal)",
     description: "Income and expenses",
     titleField: "category",
     subtitleFields: ["type", "amount", "date"],
@@ -127,8 +131,8 @@ export const MODULES: ModuleDef[] = [
   {
     id: "journal",
     title: "Farm Journal",
-    icon: "📓",
-    color: "#7e57c2",
+    glyph: "book",
+    color: "var(--purple)",
     description: "Observations, weather, harvest notes",
     titleField: "title",
     subtitleFields: ["date", "kind"],

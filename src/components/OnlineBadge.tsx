@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n";
+import Icon from "./Icon";
 
-export default function OnlineBadge() {
+/** Shown only when offline — state appears when it matters. */
+export default function OnlineBadge({ long = false }: { long?: boolean }) {
   const { t } = useI18n();
   const [online, setOnline] = useState(navigator.onLine);
   useEffect(() => {
@@ -11,5 +13,11 @@ export default function OnlineBadge() {
     window.addEventListener("offline", down);
     return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
   }, []);
-  return <span className={`pill ${online ? "ok" : "warn"}`}>{online ? t("app.online") : t("app.offline")}</span>;
+  if (online) return null;
+  return (
+    <span className="offline-badge" role="status" title={t("app.offline")}>
+      <Icon name="wifiOff" size={15} />
+      {long ? t("app.offline") : t("app.offlineShort")}
+    </span>
+  );
 }
