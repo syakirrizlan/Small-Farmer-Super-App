@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { promptInstall, useInstallState } from "../lib/install";
 import { useI18n, type TKey } from "../i18n";
+import Icon from "./Icon";
 
-/** Small top-bar button; only shown when the browser says the app can be installed. */
-export function InstallButton() {
+/** Install button for the top bar (icon only on phones) or the sidebar (full label). */
+export function InstallButton({ variant = "bar" }: { variant?: "bar" | "sidebar" }) {
   const { t } = useI18n();
   const state = useInstallState();
   if (state !== "available") return null;
   return (
-    <button type="button" className="install-btn" title={t("install.buttonTitle")} aria-label={t("install.button")}
-      onClick={() => { promptInstall(); }}>
-      ⬇<span className="install-label">{t("install.button")}</span>
+    <button type="button" className={`install-btn ${variant === "sidebar" ? "btn-tinted btn-sm" : "icon-btn"}`}
+      title={t("install.buttonTitle")} aria-label={t("install.button")} onClick={() => { promptInstall(); }}>
+      <Icon name="download" size={variant === "sidebar" ? 18 : 20} />
+      {variant === "sidebar" && <span className="install-label">{t("install.button")}</span>}
     </button>
   );
 }
