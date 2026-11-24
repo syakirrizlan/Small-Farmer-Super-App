@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { promptInstall, useInstallState } from "../lib/install";
 import { useI18n, type TKey } from "../i18n";
 import Icon from "./Icon";
@@ -17,29 +17,44 @@ export function InstallButton({ variant = "bar" }: { variant?: "bar" | "sidebar"
   );
 }
 
-/** Settings card: install button, "installed" status, or manual steps. */
+/** Settings section body: install row (button or status) with explanatory footnotes. */
 export function InstallCard() {
   const { t } = useI18n();
   const state = useInstallState();
   const [result, setResult] = useState<TKey | null>(null);
 
   const install = async () => setResult((await promptInstall()) ? "install.done" : "install.dismissed");
+  const installed = state === "installed" || state === "installed-elsewhere";
 
   return (
-    <div className="card">
+    <>
+      <ul className="group">
+        <li className="cell set-install-row">
+          <span className="tile tile-lg set-install-tile" style={{ "--tile": installed ? "var(--green)" : "var(--tint)" } as CSSProperties}>
+            <Icon name={installed ? "checkmark" : "download"} />
+          </span>
+          <span className="cell-body">
+            <span className="cell-title t-headline">{t("app.brand")}</span>
+            <span className="cell-sub">
+              {installed ? t("install.statusInstalled") : state === "available" ? t("install.statusReady") : t("install.statusBrowser")}
+            </span>
+          </span>
+          {state === "available" && (
+            <button type="button" className="btn btn-sm" onClick={install}>{t("install.button")}</button>
+          )}
+        </li>
+      </ul>
       {state === "installed" ? (
-        <p>{t("install.installed")}</p>
+        <p className="section-foot">{t("install.installed")}</p>
       ) : state === "installed-elsewhere" ? (
-        <p>{t("install.installedElsewhere")}</p>
+        <p className="section-foot">{t("install.installedElsewhere")}</p>
       ) : (
         <>
-          <p className="muted">{t("install.help")}</p>
-          {state === "available"
-            ? <button type="button" onClick={install}>⬇ {t("install.button")}</button>
-            : <p className="small">{t("install.manual")}</p>}
+          <p className="section-foot">{t("install.help")}</p>
+          {state !== "available" && <p className="section-foot">{t("install.manual")}</p>}
         </>
       )}
-      {result && state !== "installed" && state !== "installed-elsewhere" && <p className="small">{t(result)}</p>}
-    </div>
+      {result && !installed && <p className="section-foot set-status" role="status">{t(result)}</p>}
+    </>
   );
 }

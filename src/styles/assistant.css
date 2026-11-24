@@ -29,8 +29,8 @@
 .asst-vault { display: flex; flex-direction: column; gap: 12px; }
 
 /* ---------- Thread ---------- */
-.asst { gap: 20px; }
-.asst-thread { display: flex; flex-direction: column; min-height: 0; }
+.asst { gap: 20px; min-height: calc(100dvh - 52px - env(safe-area-inset-top) - var(--tabbar-h) - env(safe-area-inset-bottom)); }
+.asst-thread { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 .asst-empty { display: flex; flex-direction: column; gap: 28px; }
 
 .asst-intro { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 16px 16px 0; }
@@ -126,6 +126,7 @@
 .asst-stop .icon path { fill: currentColor; stroke-linejoin: round; }
 
 @media (min-width: 900px) {
+  .asst { min-height: calc(100dvh - 32px); }
   .asst-dock { bottom: 0; padding-bottom: 20px; margin-bottom: -48px; }
   .asst-end { scroll-margin-bottom: 100px; }
 }

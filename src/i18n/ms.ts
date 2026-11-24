@@ -17,8 +17,11 @@ const ms: Dict = {
     buttonTitle: "Pasang Petani Kecil sebagai aplikasi dalam komputer ini",
     title: "Pasang aplikasi",
     help: "Pasang Petani Kecil supaya boleh dibuka dari menu Start atau bar tugas dalam tetingkap sendiri. Boleh digunakan tanpa internet.",
-    installed: "✓ Sudah dipasang. Anda sedang menggunakan aplikasi ini.",
-    installedElsewhere: "✓ Sudah dipasang dalam komputer ini. Buka “Small Farmer Super App” dari menu Start atau bar tugas, atau klik “Buka dalam aplikasi” (Open in app) di hujung kanan bar alamat.",
+    statusInstalled: "Sudah dipasang",
+    statusReady: "Sedia untuk dipasang · boleh guna tanpa internet",
+    statusBrowser: "Pasang melalui pelayar anda",
+    installed: "Sudah dipasang. Anda sedang menggunakan aplikasi ini.",
+    installedElsewhere: "Sudah dipasang dalam komputer ini. Buka “Small Farmer Super App” dari menu Start atau bar tugas, atau klik “Buka dalam aplikasi” (Open in app) di hujung kanan bar alamat.",
     manual: "Pelayar anda belum menawarkan pemasangan. Dalam Microsoft Edge atau Google Chrome, klik ikon pasang di hujung kanan bar alamat, atau buka menu pelayar (⋯ atau ⋮) dan pilih “Pasang Small Farmer Super App” (Install Small Farmer Super App). Dalam Edge: Aplikasi → Pasang laman ini sebagai aplikasi. Jika anda nampak “Buka dalam aplikasi” (Open in app), ia sudah dipasang.",
     done: "Sudah dipasang! Buka “Small Farmer Super App” dari menu Start.",
     dismissed: "Pemasangan dibatalkan. Anda boleh memasangnya bila-bila masa dari sini.",
@@ -153,7 +156,10 @@ const ms: Dict = {
   },
 
   settings: {
-    title: "⚙️ Tetapan",
+    title: "Tetapan",
+    apiKeys: "Kunci API",
+    version: "Versi",
+    versionValue: "0.1 (versi awal)",
     language: "Bahasa",
     languageHelp: "Pilih bahasa untuk aplikasi dan jawapan pembantu AI.",
     aiAssistant: "Pembantu AI",
@@ -171,7 +177,7 @@ const ms: Dict = {
   },
 
   ai: {
-    providerTitle: "🧠 Penyedia AI",
+    providerTitle: "Penyedia AI",
     providerHelp: "Gunakan mana-mana syarikat AI pilihan anda. Anda boleh tukar bila-bila masa; rekod ladang anda kekal dalam peranti ini.",
     providerGroup: "Penyedia AI",
     noKeyYet: "Belum ada kunci",
@@ -193,7 +199,7 @@ const ms: Dict = {
 
     worksWithoutKey: "{provider} boleh digunakan tanpa kunci.",
     serverNeedsKey: "Pelayan saya perlukan kunci",
-    saveKeyTitle: "🔑 Simpan kunci {provider} anda",
+    saveKeyTitle: "Simpan kunci {provider} anda",
     vaultHelp: "Kunci API anda dilindungi dengan kata laluan pilihan anda dan disimpan dalam peranti ini sahaja. Satu kata laluan melindungi kunci API untuk semua penyedia.",
     getKeyAt: "Dapatkan kunci di",
     apiKeyLabel: "Kunci API {provider}",
@@ -203,7 +209,7 @@ const ms: Dict = {
     pasteKey: "Tampal kunci API anda",
     encrypting: "Menyulitkan…",
     saveSecurely: "Simpan dengan selamat",
-    keysLocked: "🔒 Kunci API terkunci",
+    keysLocked: "Kunci API terkunci",
     savedKeys: "Kunci tersimpan: {list}.",
     noKeysSaved: "Belum ada kunci disimpan.",
     unlockHelp: "Masukkan kata laluan anda untuk membukanya bagi sesi ini.",
@@ -213,7 +219,7 @@ const ms: Dict = {
     forgotPassphrase: "Lupa kata laluan?",
     deleteAllKeys: "Padam semua kunci tersimpan",
     resetHelp: "Tanpa kata laluan, kunci tidak boleh dipulihkan. Memadamnya membolehkan anda mula semula; rekod ladang anda tidak terjejas.",
-    keysUnlocked: "🔓 Kunci API dibuka",
+    keysUnlocked: "Kunci API dibuka",
     lock: "Kunci",
     autoLock: "Dikunci secara automatik selepas 15 minit tidak digunakan atau apabila anda menutup aplikasi.",
     remove: "Buang",
@@ -224,6 +230,9 @@ const ms: Dict = {
     replaceKey: "Ganti kunci {provider}",
     saving: "Menyimpan…",
     saveKey: "Simpan kunci",
+    modelTitle: "Model",
+    selected: "Dipilih",
+    keySaved: "Kunci disimpan",
   },
 
   providers: {

@@ -19,8 +19,11 @@ const en = {
     buttonTitle: "Install Small Farmer as an app on this computer",
     title: "Install the app",
     help: "Install Small Farmer to open it from the Start menu or taskbar in its own window. It works offline.",
-    installed: "✓ Installed. You're using the app now.",
-    installedElsewhere: "✓ Already installed on this computer. Open “Small Farmer Super App” from the Start menu or taskbar, or click “Open in app” at the right of the address bar.",
+    statusInstalled: "Installed",
+    statusReady: "Ready to install · works offline",
+    statusBrowser: "Install from your browser",
+    installed: "Installed. You're using the app now.",
+    installedElsewhere: "Already installed on this computer. Open “Small Farmer Super App” from the Start menu or taskbar, or click “Open in app” at the right of the address bar.",
     manual: "Your browser hasn't offered installation yet. In Microsoft Edge or Google Chrome, click the install icon at the right of the address bar, or open the browser menu (⋯ or ⋮) and choose “Install Small Farmer Super App” (in Edge: Apps → Install this site as an app). If you see “Open in app” instead, it's already installed.",
     done: "Installed! Open “Small Farmer Super App” from the Start menu.",
     dismissed: "Installation cancelled. You can install any time from here.",
@@ -160,7 +163,10 @@ const en = {
   },
 
   settings: {
-    title: "⚙️ Settings",
+    title: "Settings",
+    apiKeys: "API keys",
+    version: "Version",
+    versionValue: "0.1 (early release)",
     language: "Language",
     languageHelp: "Choose the language for the app and the AI assistant's answers.",
     aiAssistant: "AI assistant",
@@ -178,7 +184,7 @@ const en = {
   },
 
   ai: {
-    providerTitle: "🧠 AI provider",
+    providerTitle: "AI provider",
     providerHelp: "Use whichever AI company you like. You can switch at any time; your farm records stay on this device.",
     providerGroup: "AI provider",
     noKeyYet: "No key yet",
@@ -200,7 +206,7 @@ const en = {
 
     worksWithoutKey: "{provider} works without a key.",
     serverNeedsKey: "My server needs a key",
-    saveKeyTitle: "🔑 Save your {provider} key",
+    saveKeyTitle: "Save your {provider} key",
     vaultHelp: "Your keys are locked with a passphrase you choose and stored only on this device. One passphrase protects the keys for every provider.",
     getKeyAt: "Get a key at",
     apiKeyLabel: "{provider} API key",
@@ -210,7 +216,7 @@ const en = {
     pasteKey: "Paste your API key",
     encrypting: "Encrypting…",
     saveSecurely: "Save securely",
-    keysLocked: "🔒 Keys locked",
+    keysLocked: "Keys locked",
     savedKeys: "Saved keys: {list}.",
     noKeysSaved: "No keys saved yet.",
     unlockHelp: "Enter your passphrase to unlock them for this session.",
@@ -220,7 +226,7 @@ const en = {
     forgotPassphrase: "Forgot passphrase?",
     deleteAllKeys: "Delete all saved keys",
     resetHelp: "Without the passphrase the keys can't be recovered. Deleting them lets you start again; your farm records are not affected.",
-    keysUnlocked: "🔓 Keys unlocked",
+    keysUnlocked: "Keys unlocked",
     lock: "Lock",
     autoLock: "Auto-locks after 15 minutes idle or when you close the app.",
     remove: "Remove",
@@ -231,6 +237,9 @@ const en = {
     replaceKey: "Replace {provider} key",
     saving: "Saving…",
     saveKey: "Save key",
+    modelTitle: "Model",
+    selected: "Selected",
+    keySaved: "Key saved",
   },
 
   providers: {

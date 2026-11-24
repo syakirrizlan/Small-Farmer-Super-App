@@ -3,7 +3,7 @@
 /* ---------- Modules index ---------- */
 .group .track-module { min-height: 60px; padding-top: 9px; padding-bottom: 9px; }
 .track-module .cell-sub { font-size: 13px; line-height: 18px; }
-.track-modules > li + li { box-shadow: none; }
+.group.track-modules > li + li { box-shadow: none; }
 .track-modules > li + li .track-module::before {
   content: ""; position: absolute; top: 0; right: 0; left: 58px; height: .5px; background: var(--separator);
 }
