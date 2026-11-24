@@ -1,0 +1,87 @@
+/* Track area: modules index, module page, record form. Tokens only — see docs/DESIGN.md. */
+
+/* ---------- Modules index ---------- */
+.group .track-module { min-height: 60px; padding-top: 9px; padding-bottom: 9px; }
+.track-module .cell-sub { font-size: 13px; line-height: 18px; }
+.track-modules > li + li { box-shadow: none; }
+.track-modules > li + li .track-module::before {
+  content: ""; position: absolute; top: 0; right: 0; left: 58px; height: .5px; background: var(--separator);
+}
+.track-count { font-family: var(--font-rounded); font-variant-numeric: tabular-nums; min-width: 1.5ch; text-align: right; }
+
+/* ---------- Module page ---------- */
+/* Phones have a back button in the top bar; the in-page link is for the wide sidebar layout. */
+.page .track-back { align-self: flex-start; margin-bottom: -20px; }
+@media (max-width: 899px) { .page .track-back { display: none; } }
+
+.track-head { gap: 6px; }
+.track-head .tile-lg { margin-bottom: 6px; }
+
+.track-toolbar { display: flex; align-items: center; gap: 10px; margin-top: -8px; }
+.track-toolbar .track-search { flex: 1; min-width: 0; height: 36px; cursor: text; }
+.track-search input::-webkit-search-cancel-button { display: none; }
+.track-clear {
+  display: inline-grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 999px;
+  background: var(--label-3); color: var(--bg-elevated); cursor: pointer; position: relative;
+}
+.track-clear::after { content: ""; position: absolute; inset: -13px; } /* 44px hit target */
+.track-clear .icon { width: 11px; height: 11px; stroke-width: 3; }
+.track-toolbar .track-add { flex-shrink: 0; min-height: 36px; padding: 0 16px; }
+
+/* Rows: tappable body + quiet trailing delete. */
+.track-row { display: flex; align-items: stretch; transition: background-color 120ms; }
+.group .track-row-main { flex: 1; min-width: 0; min-height: 60px; padding-right: 8px; }
+.track-row-main .cell-sub { font-size: 15px; }
+.track-row.is-active { background: var(--tint-soft); }
+.track-del {
+  flex-shrink: 0; display: grid; place-items: center; width: 48px; border: 0; padding: 0 4px 0 0;
+  background: transparent; color: var(--label-3); cursor: pointer; transition: color 120ms, background-color 120ms;
+}
+.track-del:hover { color: var(--red); }
+.track-del:active { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
+.track-del .icon { width: 19px; height: 19px; }
+.track-list.is-dimmed { opacity: .55; transition: opacity 200ms var(--ease); }
+.track-list.is-dimmed:hover, .track-list.is-dimmed:focus-within { opacity: 1; }
+
+/* Empty state */
+.page .track-empty { padding: 48px 24px 32px; }
+.track-empty .track-empty-tile { width: 64px; height: 64px; border-radius: 16px; margin-bottom: 8px; }
+.track-empty .track-empty-tile .icon { width: 34px; height: 34px; color: #fff; stroke-width: 1.75; margin: 0; }
+
+/* ---------- Record form (sheet) ---------- */
+.track-sheet {
+  display: flex; flex-direction: column; gap: 0; margin-top: -8px;
+  background: var(--bg); border-radius: var(--r-lg);
+  box-shadow: 0 0 0 .5px var(--separator), 0 10px 30px -12px rgba(0, 0, 0, .18);
+  overflow: hidden; animation: track-sheet-in 240ms var(--ease) both;
+}
+.track-sheet-bar {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px;
+  padding: 4px 8px; min-height: 52px; background: var(--bg-elevated);
+  box-shadow: inset 0 -.5px 0 var(--separator);
+}
+.track-sheet-title { text-align: center; max-width: 52vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track-sheet-cancel { justify-self: start; }
+.track-sheet .track-sheet-save { justify-self: end; font-weight: 600; }
+.track-sheet .track-fields { margin: 16px; }
+.track-sheet .track-field { padding-top: 9px; padding-bottom: 9px; }
+.track-label { display: flex; align-items: baseline; gap: 4px; }
+.track-unit { color: var(--label-3); }
+.track-req {
+  margin-left: auto; font: 400 12px/16px var(--font); color: var(--label-3);
+}
+.track-field-select, .track-field-date { cursor: pointer; }
+.track-field select.field-input { background-position: calc(100% - 10px) 55%, calc(100% - 5px) 55%; }
+.track-field textarea.field-input { min-height: 72px; line-height: 22px; }
+.track-field input[type="date"].field-input::-webkit-calendar-picker-indicator { opacity: .5; cursor: pointer; }
+
+@media (prefers-color-scheme: dark) {
+  .track-sheet { box-shadow: 0 0 0 .5px var(--separator); }
+  .track-field select.field-input option { background: var(--bg-elevated); color: var(--label); }
+}
+
+@keyframes track-sheet-in { from { opacity: 0; transform: translateY(10px) scale(.99); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 420px) {
+  .track-sheet .track-fields { margin: 12px; }
+}

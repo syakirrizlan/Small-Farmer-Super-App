@@ -75,7 +75,6 @@ const en = {
     countOne: "1 entry",
     countMany: "{n} entries",
     entriesHeader: "Entries",
-    updated: "Updated {date}",
     required: "Required",
     deleteEntry: "Delete {title}",
     confirmDelete: "Delete this entry?",
@@ -135,11 +134,18 @@ const en = {
   },
 
   assistant: {
-    title: "🤖 Farm Assistant",
+    title: "Assistant",
     using: "Using",
     change: "Change",
     finishSetup: "Finish setting up {provider} in",
-    intro: "The assistant can see a snapshot of your farm records. Try:",
+    intro: "The assistant can see a snapshot of your farm records and answers in your language.",
+    introTitle: "Ask about your farm",
+    suggestionsHeader: "Try asking",
+    setupTitle: "Set up the assistant",
+    setupSub: "Connect an AI provider to start asking questions about your farm.",
+    disclaimer: "Answers can be wrong. Check anything important.",
+    you: "You",
+    them: "Assistant",
     suggestions: {
       week: "What should I focus on this week?",
       money: "Summarise my income and expenses this month.",

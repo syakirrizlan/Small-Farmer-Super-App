@@ -73,7 +73,6 @@ const ms: Dict = {
     countOne: "1 rekod",
     countMany: "{n} rekod",
     entriesHeader: "Rekod",
-    updated: "Dikemas kini {date}",
     required: "Wajib",
     deleteEntry: "Padam {title}",
     confirmDelete: "Padam rekod ini?",
@@ -128,11 +127,18 @@ const ms: Dict = {
   },
 
   assistant: {
-    title: "🤖 Pembantu Ladang",
+    title: "Pembantu",
     using: "Menggunakan",
     change: "Tukar",
     finishSetup: "Lengkapkan tetapan {provider} di",
-    intro: "Pembantu boleh melihat ringkasan rekod ladang anda. Cuba tanya:",
+    intro: "Pembantu boleh melihat ringkasan rekod ladang anda dan menjawab dalam bahasa anda.",
+    introTitle: "Tanya tentang ladang anda",
+    suggestionsHeader: "Cuba tanya",
+    setupTitle: "Sediakan pembantu",
+    setupSub: "Sambungkan penyedia AI untuk mula bertanya tentang ladang anda.",
+    disclaimer: "Jawapan mungkin tidak tepat. Semak semula perkara penting.",
+    you: "Anda",
+    them: "Pembantu",
     suggestions: {
       week: "Apa yang patut saya utamakan minggu ini?",
       money: "Ringkaskan pendapatan dan perbelanjaan saya bulan ini.",
