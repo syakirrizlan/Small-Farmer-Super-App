@@ -1,16 +1,20 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import "../styles/assistant.css";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { streamChat, type ChatTurn } from "../lib/ai";
 import { useAiReadiness } from "../lib/useAi";
 import { KeyVault } from "../components/AiSetup";
+import Icon, { type IconName } from "../components/Icon";
 import { useI18n, type TKey } from "../i18n";
 import { providerName } from "../i18n/labels";
 
-const SUGGESTIONS: TKey[] = [
-  "assistant.suggestions.week",
-  "assistant.suggestions.money",
-  "assistant.suggestions.reorder",
-  "assistant.suggestions.plan",
+type Tile = CSSProperties & { "--tile"?: string };
+
+const SUGGESTIONS: { key: TKey; glyph: IconName; color: string }[] = [
+  { key: "assistant.suggestions.week", glyph: "calendar", color: "var(--red)" },
+  { key: "assistant.suggestions.money", glyph: "money", color: "var(--green)" },
+  { key: "assistant.suggestions.reorder", glyph: "box", color: "var(--orange)" },
+  { key: "assistant.suggestions.plan", glyph: "leaf", color: "var(--teal)" },
 ];
 
 export default function Assistant() {
@@ -24,8 +28,17 @@ export default function Assistant() {
   if (lang !== prevLang) { setPrevLang(lang); setError(""); }
   const abort = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [turns]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns]);
+
+  // Let the composer grow with its text, up to a few lines.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
+  }, [draft, ai?.ready]);
 
   const send = async (text: string) => {
     if (!text.trim() || busy) return;
@@ -52,44 +65,117 @@ export default function Assistant() {
   };
 
   const submit = (e: FormEvent) => { e.preventDefault(); send(draft); };
+  const canSend = !!draft.trim() && !(!navigator.onLine && ai?.provider.id !== "ollama");
 
   return (
-    <>
-      <h1>{t("assistant.title")}</h1>
-      {ai && (
-        <div className="row between provider-bar">
-          <span className="pill-outline">{t("assistant.using")} <b>{providerName(ai.provider)}</b>{ai.model && <> · <code>{ai.model}</code></>}</span>
-          <Link to="/settings" className="link">{t("assistant.change")}</Link>
-        </div>
+    <div className="page asst">
+      <header className="page-head">
+        <h1 className="t-large">{t("assistant.title")}</h1>
+        {ai && (
+          <div className="asst-provider">
+            <span className="asst-provider-text">
+              <span className="asst-provider-using">{t("assistant.using")}</span>{" "}
+              <span className="asst-provider-name">{providerName(ai.provider)}</span>
+              {ai.model && <code className="asst-model" title={ai.model}>{ai.model}</code>}
+            </span>
+            <Link to="/settings" className="asst-change">{t("assistant.change")}</Link>
+          </div>
+        )}
+      </header>
+
+      {ai && !ai.ready && (
+        <section className="section asst-setup">
+          <div className="card asst-setup-card">
+            <span className="tile tile-lg" style={{ "--tile": "var(--tint)" } as Tile}><Icon name="sparkles" /></span>
+            <div className="asst-setup-text">
+              <h2 className="t-headline">{t("assistant.setupTitle")}</h2>
+              <p className="asst-setup-sub">{t("assistant.setupSub")}</p>
+            </div>
+          </div>
+          {ai.blocker === "no-url" || ai.blocker === "no-model"
+            ? (
+              <ul className="group">
+                <li>
+                  <Link to="/settings" className="cell cell-link">
+                    <span className="tile" style={{ "--tile": "var(--label-2)" } as Tile}><Icon name="gear" /></span>
+                    <span className="cell-body">
+                      <span className="cell-title">{t("assistant.finishSetup", { provider: providerName(ai.provider) })} {t("nav.settings")}</span>
+                    </span>
+                    <Icon name="chevron" className="chev" />
+                  </Link>
+                </li>
+              </ul>
+            )
+            : <div className="asst-vault"><KeyVault /></div>}
+        </section>
       )}
-      {ai && !ai.ready && (ai.blocker === "no-url" || ai.blocker === "no-model"
-        ? <p className="card">{t("assistant.finishSetup", { provider: providerName(ai.provider) })} <Link to="/settings" className="link">{t("nav.settings")}</Link>.</p>
-        : <KeyVault />)}
+
       {ai?.ready && (
         <>
-          <div className="chat">
+          <div className="chat asst-thread" role="log" aria-live="polite" aria-relevant="additions">
             {turns.length === 0 && (
-              <div className="suggestions">
-                <p className="muted">{t("assistant.intro")}</p>
-                {SUGGESTIONS.map((s) => <button key={s} className="chip" onClick={() => send(t(s))}>{t(s)}</button>)}
+              <div className="suggestions asst-empty">
+                <div className="asst-intro">
+                  <span className="asst-intro-glyph" aria-hidden="true"><Icon name="sparkles" /></span>
+                  <h2 className="t-title3">{t("assistant.introTitle")}</h2>
+                  <p className="asst-intro-body">{t("assistant.intro")}</p>
+                </div>
+                <section className="section">
+                  <h3 className="section-title">{t("assistant.suggestionsHeader")}</h3>
+                  <ul className="group">
+                    {SUGGESTIONS.map((s) => (
+                      <li key={s.key}>
+                        <button type="button" className="chip cell cell-link" onClick={() => send(t(s.key))}>
+                          <span className="tile" style={{ "--tile": s.color } as Tile}><Icon name={s.glyph} /></span>
+                          <span className="cell-body"><span className="cell-title">{t(s.key)}</span></span>
+                          <Icon name="send" className="asst-chip-arrow" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="section-foot">{t("assistant.disclaimer")}</p>
+                </section>
               </div>
             )}
-            {turns.map((turn, i) => (
-              <div key={i} className={`bubble ${turn.role}`}>{turn.content || (busy ? t("assistant.thinking") : "")}</div>
-            ))}
-            <div ref={endRef} />
+            {turns.map((turn, i) => {
+              const typing = !turn.content && busy;
+              return (
+                <div key={i} className={`asst-row asst-row-${turn.role}`}>
+                  <span className="sr-only">{turn.role === "user" ? t("assistant.you") : t("assistant.them")}</span>
+                  <div className={`bubble ${turn.role}${typing ? " typing" : ""}`}>
+                    {typing
+                      ? <><span className="asst-dots" aria-hidden="true"><i /><i /><i /></span><span className="sr-only">{t("assistant.thinking")}</span></>
+                      : turn.content}
+                  </div>
+                </div>
+              );
+            })}
+            {turns.length > 0 && !busy && (
+              <div className="asst-new">
+                <button type="button" className="btn-plain asst-new-btn" onClick={() => setTurns([])}>
+                  <Icon name="plus" />{t("assistant.newConversation")}
+                </button>
+              </div>
+            )}
+            <div ref={endRef} className="asst-end" />
           </div>
-          {error && <p className="error">{error}</p>}
-          <form className="composer" onSubmit={submit}>
-            <textarea rows={2} value={draft} placeholder={t("assistant.placeholder")} onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(draft); } }} />
-            {busy
-              ? <button type="button" className="ghost" onClick={() => abort.current?.abort()}>{t("assistant.stop")}</button>
-              : <button disabled={!draft.trim() || (!navigator.onLine && ai.provider.id !== "ollama")}>{t("assistant.send")}</button>}
-          </form>
-          {turns.length > 0 && !busy && <button className="ghost small" onClick={() => setTurns([])}>{t("assistant.newConversation")}</button>}
+          <div className="asst-dock">
+            {error && <p className="error asst-error" role="alert"><Icon name="alert" />{error}</p>}
+            <form className="composer asst-composer" onSubmit={submit}>
+              <textarea ref={inputRef} rows={1} value={draft} placeholder={t("assistant.placeholder")} aria-label={t("assistant.placeholder")}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(draft); } }} />
+              {busy
+                ? <button type="button" className="asst-send asst-stop" onClick={() => abort.current?.abort()}>
+                    <Icon name="stop" /><span className="sr-only">{t("assistant.stop")}</span>
+                  </button>
+                : <button className="asst-send" disabled={!canSend}>
+                    <Icon name="send" /><span className="sr-only">{t("assistant.send")}</span>
+                  </button>}
+            </form>
+          </div>
         </>
       )}
-    </>
+    </div>
   );
 }

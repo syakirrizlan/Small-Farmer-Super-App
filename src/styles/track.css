@@ -77,6 +77,9 @@
 
 @media (prefers-color-scheme: dark) {
   .track-sheet { box-shadow: 0 0 0 .5px var(--separator); }
+  .track-sheet { background: var(--bg-elevated); }
+  .track-sheet .track-fields { background: var(--bg-elevated-2); }
+  .track-sheet-bar { background: transparent; }
   .track-field select.field-input option { background: var(--bg-elevated); color: var(--label); }
 }
 
