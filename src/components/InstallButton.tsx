@@ -27,6 +27,8 @@ export function InstallCard() {
     <div className="card">
       {state === "installed" ? (
         <p>{t("install.installed")}</p>
+      ) : state === "installed-elsewhere" ? (
+        <p>{t("install.installedElsewhere")}</p>
       ) : (
         <>
           <p className="muted">{t("install.help")}</p>
@@ -35,7 +37,7 @@ export function InstallCard() {
             : <p className="small">{t("install.manual")}</p>}
         </>
       )}
-      {result && state !== "installed" && <p className="small">{t(result)}</p>}
+      {result && state !== "installed" && state !== "installed-elsewhere" && <p className="small">{t(result)}</p>}
     </div>
   );
 }

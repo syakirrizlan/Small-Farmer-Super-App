@@ -101,5 +101,5 @@ button.danger-solid { background: var(--danger); color: #fff; }
 
 .install-btn { gap: .35rem; min-height: 28px; padding: .15rem .7rem; border-radius: 99px; font-size: .78rem;
   background: var(--primary-ink); color: var(--primary); }
-.topbar .row { flex-wrap: nowrap; }
+.lang-toggle, .install-btn { flex-shrink: 0; }
 @media (max-width: 480px) { .install-label { display: none; } }

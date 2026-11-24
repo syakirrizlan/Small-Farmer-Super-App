@@ -13,7 +13,19 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform?: string }>;
 }
 
-export type InstallState = "installed" | "available" | "unavailable";
+/**
+ * installed            → running in the installed app window
+ * installed-elsewhere  → installed on this device, but open in a normal browser tab
+ * available            → browser offered installation; show the Install button
+ * unavailable          → not offered (yet); show manual steps
+ */
+export type InstallState = "installed" | "installed-elsewhere" | "available" | "unavailable";
+
+const FLAG = "sf-installed";
+const readFlag = () => { try { return localStorage.getItem(FLAG) === "1"; } catch { return false; } };
+const writeFlag = (on: boolean) => {
+  try { if (on) localStorage.setItem(FLAG, "1"); else localStorage.removeItem(FLAG); } catch { /* storage blocked */ }
+};
 
 let deferred: BeforeInstallPromptEvent | null = null;
 let installedNow = false;
@@ -29,8 +41,10 @@ function runningInstalled(): boolean {
 }
 
 function compute(): InstallState {
-  if (installedNow || runningInstalled()) return "installed";
-  return deferred ? "available" : "unavailable";
+  if (runningInstalled()) { writeFlag(true); return "installed"; }
+  if (deferred) return "available";
+  if (installedNow || readFlag()) return "installed-elsewhere";
+  return "unavailable";
 }
 
 let snapshot: InstallState = compute();
@@ -43,11 +57,15 @@ if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault(); // stop the browser's own mini-bar; we show our own button
     deferred = e as BeforeInstallPromptEvent;
+    // Only fires when the app is NOT installed, so clear any stale "installed" memory (e.g. after uninstall).
+    installedNow = false;
+    writeFlag(false);
     refresh();
   });
   window.addEventListener("appinstalled", () => {
     deferred = null;
     installedNow = true;
+    writeFlag(true);
     refresh();
   });
   window.matchMedia?.("(display-mode: standalone)").addEventListener?.("change", refresh);
@@ -61,7 +79,7 @@ export async function promptInstall(): Promise<boolean> {
   try {
     await ev.prompt();
     const { outcome } = await ev.userChoice;
-    if (outcome === "accepted") installedNow = true;
+    if (outcome === "accepted") { installedNow = true; writeFlag(true); }
     return outcome === "accepted";
   } finally {
     refresh();
