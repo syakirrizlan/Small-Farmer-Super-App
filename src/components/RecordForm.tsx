@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import type { ModuleDef } from "../db/modules";
 import type { FarmRecord } from "../db/db";
+import { useI18n } from "../i18n";
+import { fieldLabel, moduleTitle, unitLabel } from "../i18n/labels";
 
 interface Props {
   module: ModuleDef;
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export default function RecordForm({ module, initial, onSave, onCancel }: Props) {
+  const { t, tOption } = useI18n();
   const [values, setValues] = useState<Record<string, unknown>>(() => ({ ...(initial ?? {}) }));
   const set = (k: string, v: unknown) => setValues((s) => ({ ...s, [k]: v }));
 
@@ -25,19 +28,19 @@ export default function RecordForm({ module, initial, onSave, onCancel }: Props)
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h3>{initial ? "Edit" : "New"} {module.title.toLowerCase()} entry</h3>
+      <h3>{t(initial ? "track.editEntry" : "track.newEntry", { section: moduleTitle(module) })}</h3>
       {module.fields.map((f) => {
         const v = (values[f.key] ?? "") as string | number;
         const common = { id: f.key, required: f.required, value: v };
         return (
           <label key={f.key} htmlFor={f.key}>
-            <span>{f.label}{f.unit ? ` (${f.unit})` : ""}{f.required ? " *" : ""}</span>
+            <span>{fieldLabel(module, f)}{f.unit ? ` (${unitLabel(f.unit)})` : ""}{f.required ? " *" : ""}</span>
             {f.type === "textarea" ? (
               <textarea {...common} rows={3} onChange={(e) => set(f.key, e.target.value)} />
             ) : f.type === "select" ? (
               <select {...common} onChange={(e) => set(f.key, e.target.value)}>
                 <option value="">—</option>
-                {f.options!.map((o) => <option key={o}>{o}</option>)}
+                {f.options!.map((o) => <option key={o} value={o}>{tOption(o)}</option>)}
               </select>
             ) : (
               <input {...common} type={f.type} inputMode={f.type === "number" ? "decimal" : undefined} step="any"
@@ -47,8 +50,8 @@ export default function RecordForm({ module, initial, onSave, onCancel }: Props)
         );
       })}
       <div className="row">
-        <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
-        <button type="submit">Save</button>
+        <button type="button" className="ghost" onClick={onCancel}>{t("common.cancel")}</button>
+        <button type="submit">{t("common.save")}</button>
       </div>
     </form>
   );

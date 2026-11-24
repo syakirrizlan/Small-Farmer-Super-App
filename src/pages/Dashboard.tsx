@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../db/db";
+import { locale, useI18n } from "../i18n";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export default function Dashboard() {
+  const { t } = useI18n();
   const stats = useLiveQuery(async () => {
     const [crops, animals, tasks, inventory, money] = await Promise.all([
       db.records("crops").toArray(),
@@ -37,34 +39,34 @@ export default function Dashboard() {
 
   return (
     <>
-      <h1>Good day, farmer 👋</h1>
+      <h1>{t("dashboard.greeting")}</h1>
       <div className="stats">
-        <Stat to="/track/crops" icon="🌱" label="Crops growing" value={stats.growing} color="#43a047" />
-        <Stat to="/track/livestock" icon="🐄" label="Animals" value={stats.animals} color="#fb8c00" />
-        <Stat to="/track/tasks" icon="✅" label="Open tasks" value={stats.openTasks} color="#1e88e5" />
-        <Stat to="/track/finance" icon="💰" label="Net this month" value={net.toLocaleString()} color={net >= 0 ? "#2e7d32" : "#c62828"} />
+        <Stat to="/track/crops" icon="🌱" label={t("dashboard.cropsGrowing")} value={stats.growing} color="#43a047" />
+        <Stat to="/track/livestock" icon="🐄" label={t("dashboard.animals")} value={stats.animals} color="#fb8c00" />
+        <Stat to="/track/tasks" icon="✅" label={t("dashboard.openTasks")} value={stats.openTasks} color="#1e88e5" />
+        <Stat to="/track/finance" icon="💰" label={t("dashboard.netThisMonth")} value={net.toLocaleString(locale())} color={net >= 0 ? "#2e7d32" : "#c62828"} />
       </div>
 
       {(stats.overdue.length > 0 || stats.lowStock.length > 0) && (
         <section className="card alert">
-          <h3>Needs attention</h3>
+          <h3>{t("dashboard.needsAttention")}</h3>
           <ul>
-            {stats.overdue.map((t) => <li key={`t${t.id}`}>⏰ Overdue: {String(t.title)}</li>)}
-            {stats.lowStock.map((i) => <li key={`i${i.id}`}>📦 Low stock: {String(i.item)} ({String(i.quantity)} {String(i.unit ?? "")})</li>)}
+            {stats.overdue.map((task) => <li key={`t${task.id}`}>⏰ {t("dashboard.overdue", { title: String(task.title) })}</li>)}
+            {stats.lowStock.map((i) => <li key={`i${i.id}`}>📦 {t("dashboard.lowStock", { item: String(i.item), qty: String(i.quantity), unit: String(i.unit ?? "") })}</li>)}
           </ul>
         </section>
       )}
 
       <section className="card">
-        <h3>Coming up</h3>
-        {stats.upcoming.length === 0 ? <p className="muted">No scheduled tasks.</p> : (
+        <h3>{t("dashboard.comingUp")}</h3>
+        {stats.upcoming.length === 0 ? <p className="muted">{t("dashboard.noScheduled")}</p> : (
           <ul className="plain">
-            {stats.upcoming.map((t) => <li key={t.id}><b>{String(t.due)}</b> — {String(t.title)}</li>)}
+            {stats.upcoming.map((task) => <li key={task.id}><b>{String(task.due)}</b> — {String(task.title)}</li>)}
           </ul>
         )}
       </section>
 
-      <Link to="/assistant" className="card cta">🤖 Ask the farm assistant about your data →</Link>
+      <Link to="/assistant" className="card cta">{t("dashboard.askAssistant")}</Link>
     </>
   );
 }

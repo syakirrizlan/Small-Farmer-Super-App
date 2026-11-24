@@ -4,7 +4,8 @@
  */
 import { getAiSettings, resolve } from "./settings";
 import { getProviderKey, peekProviderKey } from "./vault";
-import { SYSTEM, farmSnapshot, type ChatTurn } from "./llm/context";
+import { SYSTEM, farmSnapshot, languageInstruction, type ChatTurn } from "./llm/context";
+import { providerName } from "../i18n/labels";
 import type { ProviderDef } from "./providers";
 
 export type { ChatTurn };
@@ -16,7 +17,7 @@ function keyFor(provider: ProviderDef): string | undefined {
 export async function streamChat(history: ChatTurn[], onText: (delta: string) => void, signal?: AbortSignal): Promise<string> {
   const { provider, model, baseURL } = resolve(await getAiSettings());
   const apiKey = keyFor(provider);
-  const system = `${SYSTEM}\n\n${await farmSnapshot()}`;
+  const system = `${SYSTEM}\n${languageInstruction()}\n\n${await farmSnapshot()}`;
   const req = { model, baseURL, apiKey, system, history, onText, signal };
 
   if (provider.kind === "anthropic") {
@@ -24,7 +25,7 @@ export async function streamChat(history: ChatTurn[], onText: (delta: string) =>
     return streamAnthropic(req);
   }
   const { streamOpenAICompatible } = await import("./llm/openaiCompat");
-  return streamOpenAICompatible(req, provider.name);
+  return streamOpenAICompatible(req, providerName(provider));
 }
 
 /** Ask the provider which models this key can use. */
@@ -35,5 +36,5 @@ export async function listModels(provider: ProviderDef, baseURL: string): Promis
     return listAnthropicModels(apiKey!);
   }
   const { listOpenAICompatibleModels } = await import("./llm/openaiCompat");
-  return listOpenAICompatibleModels(baseURL, apiKey, provider.name);
+  return listOpenAICompatibleModels(baseURL, apiKey, providerName(provider));
 }

@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { exportAll, importAll } from "../db/db";
+import { InvalidBackupError, exportAll, importAll } from "../db/db";
 import { KeyVault, ProviderPicker } from "../components/AiSetup";
+import { LANGUAGES, useI18n, type TKey } from "../i18n";
 
 export default function Settings() {
-  const [msg, setMsg] = useState("");
+  const { t, lang, setLang } = useI18n();
+  // Store the message key (not translated text) so it follows language changes.
+  const [msg, setMsg] = useState<{ key: TKey; detail?: string } | null>(null);
 
   const doExport = async () => {
     const blob = new Blob([JSON.stringify(await exportAll(), null, 2)], { type: "application/json" });
@@ -12,36 +15,56 @@ export default function Settings() {
     a.download = `farm-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
-    setMsg("Backup downloaded.");
+    setMsg({ key: "settings.backupDownloaded" });
   };
 
   const doImport = async (file?: File) => {
-    if (!file || !confirm("Importing replaces all current farm records. Continue?")) return;
-    try { await importAll(JSON.parse(await file.text())); setMsg("Backup restored."); }
-    catch (e) { setMsg(e instanceof Error ? e.message : "Import failed"); }
+    if (!file || !confirm(t("settings.importConfirm"))) return;
+    let json: unknown;
+    try { json = JSON.parse(await file.text()); }
+    catch { setMsg({ key: "settings.invalidBackup" }); return; }
+    try { await importAll(json as Parameters<typeof importAll>[0]); setMsg({ key: "settings.backupRestored" }); }
+    catch (e) {
+      if (e instanceof InvalidBackupError) setMsg({ key: "settings.invalidBackup" });
+      else setMsg({ key: "settings.importFailed", detail: e instanceof Error ? `${e.name}: ${e.message}` : undefined });
+    }
   };
 
   return (
     <>
-      <h1>⚙️ Settings</h1>
-      <h2>AI assistant</h2>
+      <h1>{t("settings.title")}</h1>
+
+      <h2>{t("settings.language")}</h2>
+      <div className="card">
+        <p className="muted">{t("settings.languageHelp")}</p>
+        <div className="row" role="radiogroup" aria-label={t("settings.language")}>
+          {LANGUAGES.map((l) => (
+            <button key={l.id} type="button" role="radio" lang={l.id} aria-checked={lang === l.id}
+              className={lang === l.id ? "" : "ghost"} onClick={() => setLang(l.id)}>
+              {l.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <h2>{t("settings.aiAssistant")}</h2>
       <ProviderPicker />
       <KeyVault />
 
-      <h2>Your data</h2>
+      <h2>{t("settings.yourData")}</h2>
       <div className="card">
-        <p className="muted">All farm records are stored only on this device and work offline. Back them up regularly. (Backups never include your API keys.)</p>
+        <p className="muted">{t("settings.dataHelp")}</p>
         <div className="row">
-          <button onClick={doExport}>Export backup</button>
-          <label className="button ghost">Import backup
+          <button onClick={doExport}>{t("settings.exportBackup")}</button>
+          <label className="button ghost">{t("settings.importBackup")}
             <input type="file" accept="application/json" hidden onChange={(e) => doImport(e.target.files?.[0])} />
           </label>
         </div>
-        {msg && <p>{msg}</p>}
+        {msg && <p>{t(msg.key)}{msg.detail && <small className="muted"> ({msg.detail})</small>}</p>}
       </div>
 
-      <h2>About</h2>
-      <div className="card"><p className="muted">Small Farmer Super App v0.1 — skeleton release. Installable as an app from your browser menu (“Add to Home screen”).</p></div>
+      <h2>{t("settings.about")}</h2>
+      <div className="card"><p className="muted">{t("settings.aboutText")}</p></div>
     </>
   );
 }
