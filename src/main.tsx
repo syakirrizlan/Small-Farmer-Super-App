@@ -5,6 +5,7 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import { requestPersistentStorage } from "./db/db";
 import "./styles.css";
+import "./lib/install"; // listen for the install prompt before React renders
 
 registerSW({ immediate: true });
 requestPersistentStorage();

@@ -98,3 +98,8 @@ button.danger-solid { background: var(--danger); color: #fff; }
 .lang-toggle { display: inline-flex; border: 1px solid rgb(255 255 255 / .45); border-radius: 99px; overflow: hidden; }
 .lang-toggle button { min-height: 28px; padding: .1rem .55rem; border-radius: 0; background: transparent; color: var(--primary-ink); font-size: .75rem; font-weight: 600; }
 .lang-toggle button.on { background: var(--primary-ink); color: var(--primary); }
+
+.install-btn { gap: .35rem; min-height: 28px; padding: .15rem .7rem; border-radius: 99px; font-size: .78rem;
+  background: var(--primary-ink); color: var(--primary); }
+.topbar .row { flex-wrap: nowrap; }
+@media (max-width: 480px) { .install-label { display: none; } }

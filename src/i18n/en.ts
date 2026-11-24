@@ -11,6 +11,16 @@ const en = {
     online: "Online",
     offline: "Offline — saved on device",
   },
+  install: {
+    button: "Install app",
+    buttonTitle: "Install Small Farmer as an app on this computer",
+    title: "Install the app",
+    help: "Install Small Farmer to open it from the Start menu or taskbar in its own window. It works offline.",
+    installed: "✓ Installed. Open Small Farmer from the Start menu or taskbar.",
+    manual: "Your browser hasn't offered installation yet. In Microsoft Edge or Google Chrome, click the install icon at the right of the address bar, or open the browser menu (⋯ or ⋮) and choose “Install Small Farmer” / “Apps → Install this site as an app”.",
+    done: "Installed! You can now open it from the Start menu.",
+    dismissed: "Installation cancelled. You can install any time from here.",
+  },
   nav: { home: "Home", track: "Track", assistant: "Assistant", settings: "Settings" },
   common: { cancel: "Cancel", save: "Save", delete: "Delete", back: "Back", untitled: "(untitled)" },
 
@@ -125,7 +135,7 @@ const en = {
     importFailed: "Import failed",
     invalidBackup: "Not a valid backup file",
     about: "About",
-    aboutText: "Small Farmer Super App v0.1 — skeleton release. Installable as an app from your browser menu (“Add to Home screen”).",
+    aboutText: "Small Farmer Super App v0.1 — skeleton release.",
   },
 
   ai: {
