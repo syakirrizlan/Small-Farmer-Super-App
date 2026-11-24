@@ -6,6 +6,7 @@ import { db, type FarmRecord } from "../db/db";
 import { getModule } from "../db/modules";
 import Icon, { type IconName } from "../components/Icon";
 import { locale, tDynamic, useI18n } from "../i18n";
+import { formatMoney } from "../lib/format";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -63,7 +64,7 @@ export default function Dashboard() {
   const hour = now.getHours();
   const greeting = hour < 12 ? t("dashboard.greetingMorning") : hour < 18 ? t("dashboard.greetingAfternoon") : t("dashboard.greetingEvening");
   const dateLine = now.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" });
-  const netText = net.toLocaleString(loc, { signDisplay: "exceptZero", maximumFractionDigits: 2 });
+  const netText = formatMoney(net, { signed: true });
   const shortDate = (s: unknown) => {
     const d = parseDay(String(s ?? ""));
     return d ? d.toLocaleDateString(loc, { day: "numeric", month: "short" }) : String(s ?? "");
@@ -86,7 +87,7 @@ export default function Dashboard() {
           <Stat to="/track/tasks" glyph={moduleGlyph("tasks", "check")} color={moduleColor("tasks", "var(--blue)")}
             label={t("dashboard.openTasks")} value={stats.openTasks.toLocaleString(loc)} />
           <Stat to="/track/finance" glyph={moduleGlyph("finance", "money")} color={moduleColor("finance", "var(--teal)")}
-            label={t("dashboard.netThisMonth")} value={netText} unit={t("dashboard.currency")}
+            label={t("dashboard.netThisMonth")} value={netText}
             tone={net > 0 ? "pos" : net < 0 ? "neg" : undefined} />
         </div>
       </section>
@@ -199,17 +200,18 @@ function UpcomingRow({ task, shortDate }: { task: FarmRecord; shortDate: (s: unk
   );
 }
 
-function Stat({ to, glyph, color, label, value, unit, tone }: {
-  to: string; glyph: IconName; color: string; label: string; value: string; unit?: string; tone?: "pos" | "neg";
+function Stat({ to, glyph, color, label, value, tone }: {
+  to: string; glyph: IconName; color: string; label: string; value: string; tone?: "pos" | "neg";
 }) {
+  // Character count drives a container-relative font size so long money values shrink to fit.
+  const fit = { "--chars": Math.max(value.length, 1) } as CSSProperties;
   return (
-    <Link to={to} className={`stat dash-stat${tone ? ` dash-stat-${tone}` : ""}${value.length > 6 ? " dash-stat-long" : ""}`}>
+    <Link to={to} className={`stat dash-stat${tone ? ` dash-stat-${tone}` : ""}${value.length > 4 ? " dash-stat-long" : ""}`} style={fit}>
       <span className="dash-stat-top">
         <span className="tile" style={tileStyle(color)}><Icon name={glyph} /></span>
         <Icon name="chevron" className="dash-stat-chev" />
       </span>
       <span className="dash-stat-value">
-        {unit && <span className="dash-stat-unit">{unit}</span>}
         <strong>{value}</strong>
       </span>
       <span className="dash-stat-label">{label}</span>

@@ -6,17 +6,21 @@
   --fill: rgba(118, 118, 128, 0.12);
   --fill-strong: rgba(118, 118, 128, 0.2);
   --label: #000000;
-  --label-2: rgba(60, 60, 67, 0.62);
+  --label-2: rgba(60, 60, 67, 0.76);   /* >=4.9:1 on --bg, 5.3:1 on white */
   --label-3: rgba(60, 60, 67, 0.32);
   --separator: rgba(60, 60, 67, 0.2);
   --bar-bg: rgba(249, 249, 249, 0.78);
   --bar-border: rgba(0, 0, 0, 0.12);
   --sidebar-bg: rgba(236, 236, 241, 0.82);
 
-  --tint: #1f8a3c;          /* leaf green, 4.6:1 on white */
-  --tint-pressed: #18722f;
-  --tint-soft: rgba(31, 138, 60, 0.12);
+  --tint: #176f2c;          /* leaf green, 6.3:1 on white, >=4.7:1 on --bg and on --tint-soft */
+  --tint-pressed: #125a23;
+  --tint-soft: rgba(23, 111, 44, 0.12);
   --on-tint: #ffffff;
+
+  /* Text-only variants of the semantic colours (fills and icons keep the base colour). */
+  --red-text: #c4261d;      /* 5.8:1 on white, >=4.6:1 on a 15% red wash */
+  --orange-text: #9a5200;   /* >=4.6:1 on a 16% orange wash over --bg */
 
   --red: #e5342a; --orange: #f08a00; --yellow: #d9a400; --green: #28a745;
   --blue: #0a6cff; --indigo: #5150d4; --purple: #a24fd6; --brown: #9a7b56; --teal: #2aa3b8;
@@ -56,6 +60,9 @@
     --tint-pressed: #2fb350;
     --tint-soft: rgba(52, 199, 89, 0.18);
     --on-tint: #04210d;
+
+    --red-text: #ff6961;
+    --orange-text: color-mix(in srgb, var(--orange) 78%, var(--label));
 
     --red: #ff453a; --orange: #ff9f0a; --yellow: #ffd60a; --green: #30d158;
     --blue: #0a84ff; --indigo: #5e5ce6; --purple: #bf5af2; --brown: #ac8e68; --teal: #40c8e0;

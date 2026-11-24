@@ -15,10 +15,11 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 const tileStyle = (color: string) => ({ "--tile": color }) as CSSProperties;
 
 /** Neutral tile colours, assigned by position so neighbouring providers never share one. */
-const PROVIDER_TILES = ["var(--brown)", "var(--blue)", "var(--teal)", "var(--indigo)", "var(--purple)", "var(--orange)", "var(--red)", "var(--green)"];
+/* Only hues that stay dark enough for a white initial; settings.css darkens them further. */
+const PROVIDER_TILES = ["var(--brown)", "var(--blue)", "var(--indigo)", "var(--red)", "var(--purple)"];
 
 function ProviderTile({ p, index }: { p: ProviderDef; index: number }) {
-  if (p.id === "custom") return <span className="tile" style={tileStyle("var(--label-2)")}><Icon name="cpu" /></span>;
+  if (p.id === "custom") return <span className="tile set-custom-tile" aria-hidden="true"><Icon name="cpu" /></span>;
   return (
     <span className="tile set-initial" style={tileStyle(PROVIDER_TILES[index % PROVIDER_TILES.length])} aria-hidden="true">
       {providerName(p).trim().charAt(0).toUpperCase()}
@@ -106,6 +107,7 @@ function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: Vau
   const canList = !!baseURL && (!provider.keyRequired || (vault.unlocked && !!vault.hints[provider.id]));
   const urlWarning = urlProblem(urlDraft);
   const note = providerNote(provider);
+  const blocked = !baseURL ? t("ai.enterAddressFirst") : !vault.hints[provider.id] ? t("ai.addKeyFirst") : t("ai.unlockFirst");
 
   return (
     <section className="section">
@@ -122,12 +124,15 @@ function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: Vau
         <label className="field" htmlFor="model"><span className="field-label">{t("ai.model")}</span>
           <input id="model" className="field-input set-mono-input" list="model-options" value={modelDraft} spellCheck={false}
             autoCapitalize="off" autoCorrect="off"
-            placeholder={provider.defaultModel ? t("ai.modelDefault", { model: provider.defaultModel }) : t("ai.modelName")}
+            placeholder={t("ai.modelName")} aria-describedby={!modelDraft && provider.defaultModel ? "model-default" : undefined}
             onChange={(e) => { setModelDraft(e.target.value); setProviderModel(provider.id, e.target.value); }} />
+          {!modelDraft && provider.defaultModel && (
+            <small id="model-default" className="field-hint">{t("ai.modelDefault", { model: provider.defaultModel })}</small>
+          )}
           <datalist id="model-options">{options.map((m) => <option key={m} value={m} />)}</datalist>
         </label>
         <button type="button" className="cell cell-link set-action" disabled={loading || !canList} onClick={loadModels}
-          title={canList ? "" : baseURL ? t("ai.unlockFirst") : t("ai.enterAddressFirst")}>
+          title={canList ? "" : blocked}>
           <span className="cell-body"><span className="cell-title">{loading ? t("ai.loadingModels") : t("ai.loadModels")}</span></span>
           {loading
             ? <span className="set-spinner" aria-hidden="true" />
@@ -136,7 +141,7 @@ function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: Vau
       </div>
       {!model && <p className="section-foot set-error" role="alert">{t("ai.enterModel")}</p>}
       {error && <p className="section-foot set-error" role="alert">{error}</p>}
-      {!canList && !loading && <p className="section-foot">{baseURL ? t("ai.unlockFirst") : t("ai.enterAddressFirst")}.</p>}
+      {!canList && !loading && <p className="section-foot">{blocked}</p>}
       <p className="section-foot">
         {t("ai.dataNotice", { provider: providerName(provider), model: model ? t("ai.dataNoticeModel", { model }) : "" })}
       </p>

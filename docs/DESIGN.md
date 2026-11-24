@@ -18,10 +18,11 @@ conventions (clarity, deference, depth) — **no third-party brand names, logos 
 | `--bg-elevated` | cells, cards, widgets (light #FFF, dark #1C1C1E) |
 | `--bg-elevated-2` | inputs/fills on top of cells (light #F2F2F7-ish, dark #2C2C2E) |
 | `--fill` | subtle control fills (segmented, search field) |
-| `--label`, `--label-2`, `--label-3` | primary / secondary / tertiary text |
-| `--separator` | hairlines between rows |
-| `--tint`, `--tint-soft`, `--on-tint` | accent (buttons, links, selection), its 12% wash, text on tint |
-| `--red`, `--orange`, `--yellow`, `--green`, `--blue`, `--indigo`, `--purple`, `--brown`, `--teal` | semantic + icon tiles |
+| `--label`, `--label-2`, `--label-3` | primary / secondary / tertiary text. `--label-2` is ≥ 4.5:1 on every surface (light alpha .76); `--label-3` is for placeholders, chevrons and decoration only, never for text that must be read |
+| `--separator` | hairlines between rows, inset to the text start via `--sep-inset` (16px; 58px after a `.tile`; 72px after a `.tile-lg` or `.dash-cal`) — one rule in `base.css` for every `.group` |
+| `--tint`, `--tint-soft`, `--on-tint` | accent (buttons, links, selection), its 12% wash, text on tint. Light #176F2C (6.3:1 on white, ≥ 4.5:1 on `--bg`, `--tint-soft` and the sidebar), dark #34C759 |
+| `--red`, `--orange`, `--yellow`, `--green`, `--blue`, `--indigo`, `--purple`, `--brown`, `--teal` | semantic fills + icon tiles |
+| `--red-text`, `--orange-text` | the same meanings as **text** (errors, negative money, badges, late dates); ≥ 4.5:1 on their own 15–16% wash. Never use `--red`/`--orange` for text |
 | `--bar-bg` | translucent bar fill used with `backdrop-filter: saturate(180%) blur(20px)` |
 | `--r-sm` 8 / `--r-md` 12 / `--r-lg` 16 / `--r-xl` 22 | radii |
 | `--font`, `--font-rounded`, `--font-mono` | system text, rounded numerals, mono |
@@ -56,7 +57,9 @@ rows highlight on press. Everything disabled under `prefers-reduced-motion: redu
 
 ## Accessibility
 Text contrast ≥ 4.5:1 (tint text uses the darker tint in light mode). Hit targets ≥ 44px. Visible focus ring
-(`:focus-visible` 3px tint-soft outline). Icons that carry meaning have `aria-label`; decorative icons `aria-hidden`.
+(`:focus-visible` 2px solid `--tint` outline, offset 2px; inside a `.group` it is drawn inset at -2px so the group's
+`overflow: hidden` can't clip it). Compact controls (top-bar EN/BM) keep their small look but get an invisible 44px
+`::after` hit area. Icons that carry meaning have `aria-label`; decorative icons `aria-hidden`.
 
 ## Copy
 Sentence case. Section titles short. Keep all text in `src/i18n/en.ts` + `ms.ts` (Malay must stay complete).

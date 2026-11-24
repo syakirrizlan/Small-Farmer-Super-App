@@ -1,5 +1,5 @@
 import "../styles/track.css";
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getModule } from "../db/modules";
@@ -8,6 +8,7 @@ import RecordForm from "../components/RecordForm";
 import Icon from "../components/Icon";
 import { useI18n } from "../i18n";
 import { moduleTitle, unitLabel } from "../i18n/labels";
+import { formatMoney, formatNumber } from "../lib/format";
 
 export default function ModulePage() {
   const { moduleId = "" } = useParams();
@@ -15,11 +16,29 @@ export default function ModulePage() {
   const module = getModule(moduleId);
   const [editing, setEditing] = useState<FarmRecord | "new" | null>(null);
   const [q, setQ] = useState("");
+  // Where focus/scroll returns when the editor closes: the edited row, or the + Add button.
+  const returnTo = useRef<number | "add" | null>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
   const rows = useLiveQuery<FarmRecord[], FarmRecord[]>(
     () => (module ? db.records(module.id).orderBy("updatedAt").reverse().toArray() : []),
     [moduleId],
     [] as FarmRecord[],
   );
+
+  useEffect(() => {
+    if (editing || returnTo.current == null) return;
+    const target = returnTo.current;
+    returnTo.current = null;
+    requestAnimationFrame(() => {
+      const row = typeof target === "number"
+        ? document.querySelector<HTMLElement>(`.track-row[data-id="${target}"] .track-row-main`)
+        : null;
+      const el = row ?? addRef.current;
+      if (!el) return;
+      if (row) el.scrollIntoView({ block: "center" });
+      el.focus({ preventScroll: !!row });
+    });
+  }, [editing]);
 
   if (!module) {
     return (
@@ -50,7 +69,10 @@ export default function ModulePage() {
   const display = (k: string, v: unknown) => {
     const f = module.fields.find((x) => x.key === k);
     if (f?.type === "date" && typeof v === "string") return fmtDate(v);
-    if (f?.type === "number" && f.unit) return `${show(k, v)} ${unitLabel(f.unit)}`;
+    if (f?.type === "number" && v !== "" && Number.isFinite(Number(v))) {
+      if (module.id === "finance" && k === "amount") return formatMoney(v);
+      return f.unit ? `${formatNumber(v)} ${unitLabel(f.unit)}` : formatNumber(v);
+    }
     return show(k, v);
   };
 
@@ -65,7 +87,14 @@ export default function ModulePage() {
   };
 
   const remove = async (r: FarmRecord) => {
-    if (r.id != null && confirm(t("track.confirmDelete"))) await table.delete(r.id);
+    if (r.id == null || !confirm(t("track.confirmDelete"))) return;
+    await table.delete(r.id);
+    returnTo.current = "add";
+    setEditing(null);
+  };
+  const open = (target: FarmRecord | "new") => {
+    returnTo.current = target === "new" ? "add" : target.id ?? "add";
+    setEditing(target);
   };
 
   const count = rows.length === 1 ? t("track.countOne") : t("track.countMany", { n: String(rows.length) });
@@ -85,8 +114,9 @@ export default function ModulePage() {
       </header>
 
       {editing ? (
-        <RecordForm module={module} initial={editing === "new" ? undefined : editing}
-          onSave={save} onCancel={() => setEditing(null)} />
+        <RecordForm key={editing === "new" ? "new" : editing.id} module={module} initial={editing === "new" ? undefined : editing}
+          onSave={save} onCancel={() => setEditing(null)}
+          onDelete={editing === "new" ? undefined : () => remove(editing)} />
       ) : (
         <div className="track-toolbar">
           <label className="search-field track-search">
@@ -100,7 +130,7 @@ export default function ModulePage() {
               </button>
             )}
           </label>
-          <button type="button" className="btn btn-sm track-add" onClick={() => setEditing("new")}>
+          <button type="button" ref={addRef} className="btn btn-sm track-add" onClick={() => open("new")}>
             {t("track.add")}
           </button>
         </div>
@@ -134,17 +164,13 @@ export default function ModulePage() {
                 .join(" · ");
               const active = editing !== null && editing !== "new" && editing.id === r.id;
               return (
-                <li key={r.id} className={`item track-row${active ? " is-active" : ""}`}>
-                  <button type="button" className="cell cell-link track-row-main" onClick={() => setEditing(r)}>
+                <li key={r.id} data-id={r.id} className={`item track-row${active ? " is-active" : ""}`}>
+                  <button type="button" className="cell cell-link track-row-main" onClick={() => open(r)}>
                     <span className="cell-body">
                       <span className="cell-title">{title}</span>
                       {sub && <span className="cell-sub">{sub}</span>}
                     </span>
                     <Icon name="chevron" className="chev" />
-                  </button>
-                  <button type="button" className="track-del" aria-label={t("common.delete")}
-                    title={t("track.deleteEntry", { title })} onClick={() => remove(r)}>
-                    <Icon name="trash" size={20} />
                   </button>
                 </li>
               );

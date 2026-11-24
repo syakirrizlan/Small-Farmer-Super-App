@@ -7,14 +7,16 @@ import { KeyVault } from "../components/AiSetup";
 import Icon, { type IconName } from "../components/Icon";
 import { useI18n, type TKey } from "../i18n";
 import { providerName } from "../i18n/labels";
+import { getModule } from "../db/modules";
 
 type Tile = CSSProperties & { "--tile"?: string };
 
 const SUGGESTIONS: { key: TKey; glyph: IconName; color: string }[] = [
-  { key: "assistant.suggestions.week", glyph: "calendar", color: "var(--red)" },
-  { key: "assistant.suggestions.money", glyph: "money", color: "var(--green)" },
-  { key: "assistant.suggestions.reorder", glyph: "box", color: "var(--orange)" },
-  { key: "assistant.suggestions.plan", glyph: "leaf", color: "var(--teal)" },
+  // Colours come from the module registry so each glyph matches its module elsewhere.
+  { key: "assistant.suggestions.week", glyph: "calendar", color: getModule("tasks")?.color ?? "var(--blue)" },
+  { key: "assistant.suggestions.money", glyph: "money", color: getModule("finance")?.color ?? "var(--teal)" },
+  { key: "assistant.suggestions.reorder", glyph: "box", color: getModule("inventory")?.color ?? "var(--indigo)" },
+  { key: "assistant.suggestions.plan", glyph: "leaf", color: getModule("crops")?.color ?? "var(--green)" },
 ];
 
 export default function Assistant() {
@@ -29,6 +31,15 @@ export default function Assistant() {
   const abort = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [online, setOnline] = useState(() => navigator.onLine);
+
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+  }, []);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns]);
 
@@ -40,12 +51,16 @@ export default function Assistant() {
     el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
   }, [draft, ai?.ready]);
 
+  // Cloud providers need the internet; a local Ollama server may still be reachable.
+  const offlineBlocked = !online && ai?.provider.id !== "ollama";
+
   const send = async (text: string) => {
-    if (!text.trim() || busy) return;
+    if (!text.trim() || busy || offlineBlocked) return;
     const history: ChatTurn[] = [...turns, { role: "user", content: text.trim() }];
     setTurns([...history, { role: "assistant", content: "" }]);
     setDraft(""); setBusy(true); setError("");
-    abort.current = new AbortController();
+    const controller = new AbortController();
+    abort.current = controller;
     try {
       const final = await streamChat(history, (delta) => {
         setTurns((t) => {
@@ -53,19 +68,20 @@ export default function Assistant() {
           copy[copy.length - 1] = { role: "assistant", content: copy[copy.length - 1].content + delta };
           return copy;
         });
-      }, abort.current.signal);
+      }, controller.signal);
       setTurns([...history, { role: "assistant", content: final }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setTurns(history.slice(0, -1)); // drop the failed exchange
       setDraft(text);
     } finally {
+      if (abort.current === controller) abort.current = null;
       setBusy(false);
     }
   };
 
   const submit = (e: FormEvent) => { e.preventDefault(); send(draft); };
-  const canSend = !!draft.trim() && !(!navigator.onLine && ai?.provider.id !== "ollama");
+  const canSend = !!draft.trim() && !offlineBlocked;
 
   return (
     <div className="page asst">
@@ -160,16 +176,21 @@ export default function Assistant() {
             <div ref={endRef} className="asst-end" />
           </div>
           <div className="asst-dock">
+            {offlineBlocked && <p className="asst-note" role="status"><Icon name="alert" />{t("assistant.offline")}</p>}
             {error && <p className="error asst-error" role="alert"><Icon name="alert" />{error}</p>}
             <form className="composer asst-composer" onSubmit={submit}>
               <textarea ref={inputRef} rows={1} value={draft} placeholder={t("assistant.placeholder")} aria-label={t("assistant.placeholder")}
                 onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(draft); } }} />
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (canSend) send(draft); } }} />
+              {/* Separate keyed nodes: if React reused one <button> for Stop and Send, the Stop
+                  click's default action would run after it turned back into a submit button and
+                  re-send the message. preventDefault cancels that activation as well. */}
               {busy
-                ? <button type="button" className="asst-send asst-stop" onClick={() => abort.current?.abort()}>
+                ? <button key="stop" type="button" className="asst-send asst-stop"
+                    onClick={(e) => { e.preventDefault(); abort.current?.abort(); }}>
                     <Icon name="stop" /><span className="sr-only">{t("assistant.stop")}</span>
                   </button>
-                : <button className="asst-send" disabled={!canSend}>
+                : <button key="send" type="submit" className="asst-send" disabled={!canSend}>
                     <Icon name="send" /><span className="sr-only">{t("assistant.send")}</span>
                   </button>}
             </form>

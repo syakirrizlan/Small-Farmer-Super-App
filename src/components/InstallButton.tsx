@@ -17,13 +17,18 @@ export function InstallButton({ variant = "bar" }: { variant?: "bar" | "sidebar"
   );
 }
 
+/** Phones and tablets (incl. iPadOS, which reports itself as a Mac). The desktop Edge/Chrome steps don't apply there. */
+const isMobile = () => /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 /** Settings section body: install row (button or status) with explanatory footnotes. */
 export function InstallCard() {
   const { t } = useI18n();
   const state = useInstallState();
   const [result, setResult] = useState<TKey | null>(null);
+  const [mobile] = useState(isMobile);
 
-  const install = async () => setResult((await promptInstall()) ? "install.done" : "install.dismissed");
+  const install = async () => setResult((await promptInstall()) ? (mobile ? "install.doneMobile" : "install.done") : "install.dismissed");
   const installed = state === "installed" || state === "installed-elsewhere";
 
   return (
@@ -47,7 +52,9 @@ export function InstallCard() {
       {state === "installed" ? (
         <p className="section-foot">{t("install.installed")}</p>
       ) : state === "installed-elsewhere" ? (
-        <p className="section-foot">{t("install.installedElsewhere")}</p>
+        <p className="section-foot">{t(mobile ? "install.installedElsewhereMobile" : "install.installedElsewhere")}</p>
+      ) : mobile ? (
+        <p className="section-foot">{t("install.helpMobile")}</p>
       ) : (
         <>
           <p className="section-foot">{t("install.help")}</p>

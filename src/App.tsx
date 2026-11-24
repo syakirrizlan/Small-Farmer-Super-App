@@ -36,14 +36,25 @@ function useCompactTitle(): { title: string; back?: string } {
   return { title: item ? t(item.label) : "" };
 }
 
-function useScrolled(threshold = 36) {
+/**
+ * True once the page's Large Title (.page-head h1) has scrolled fully under the top bar, so the
+ * compact title never shows while the large one is still visible. Re-queries the h1 on every
+ * event, which also covers lazily loaded pages (Assistant). Falls back to a small offset.
+ */
+function useScrolled(pathname: string) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const on = () => setScrolled(window.scrollY > threshold);
+    const on = () => {
+      const h1 = document.querySelector<HTMLElement>(".page-head h1");
+      const bar = document.querySelector<HTMLElement>(".topbar");
+      if (!h1 || !bar) { setScrolled(window.scrollY > 36); return; }
+      setScrolled(h1.getBoundingClientRect().bottom <= bar.getBoundingClientRect().bottom);
+    };
     on();
     window.addEventListener("scroll", on, { passive: true });
-    return () => window.removeEventListener("scroll", on);
-  }, [threshold]);
+    window.addEventListener("resize", on);
+    return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", on); };
+  }, [pathname]);
   return scrolled;
 }
 
@@ -56,9 +67,9 @@ function ScrollToTop() {
 export default function App() {
   const { t } = useI18n();
   const wide = useMediaQuery(WIDE);
-  const scrolled = useScrolled();
-  const { title, back } = useCompactTitle();
   const { pathname } = useLocation();
+  const scrolled = useScrolled(pathname);
+  const { title, back } = useCompactTitle();
 
   const routes = (
     <Routes>

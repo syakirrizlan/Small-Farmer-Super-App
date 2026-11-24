@@ -21,11 +21,15 @@
 .topbar-side { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .topbar-side.end { justify-content: flex-end; }
 .topbar-back { display: inline-grid; place-items: center; width: 44px; height: 44px; color: var(--tint); margin-left: -6px; }
-.topbar .lang-toggle button { padding: 3px 9px; min-height: 26px; font-size: 12px; }
+.topbar .lang-toggle button { position: relative; padding: 3px 9px; min-height: 26px; font-size: 12px; }
+/* Invisible 44px-tall hit area around the compact 26px pill; split the 2px gap so targets never overlap. */
+.topbar .lang-toggle button::after { content: ""; position: absolute; inset: -9px -1px; }
+.topbar .lang-toggle button:first-child::after { left: -6px; }
+.topbar .lang-toggle button:last-child::after { right: -8px; }
 
 .offline-badge {
   display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px 4px 8px; border-radius: 999px;
-  background: color-mix(in srgb, var(--orange) 16%, transparent); color: color-mix(in srgb, var(--orange) 78%, var(--label));
+  background: color-mix(in srgb, var(--orange) 16%, transparent); color: var(--orange-text);
   font: 600 12px/16px var(--font); white-space: nowrap;
 }
 .install-btn.icon-btn { width: 32px; height: 32px; }
@@ -59,7 +63,7 @@
 .sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
 .side-item {
-  display: flex; align-items: center; gap: 12px; padding: 0 10px; min-height: 40px; border-radius: 10px;
+  display: flex; align-items: center; gap: 12px; padding: 0 10px; min-height: 44px; border-radius: 10px;
   color: var(--label); font: 500 15px/20px var(--font); transition: background-color 120ms;
 }
 .side-item .icon { color: var(--tint); }
@@ -67,3 +71,5 @@
 .side-item.active { background: var(--tint-soft); color: var(--tint); font-weight: 600; }
 .sidebar-foot { margin-top: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 0 8px; }
 .sidebar-foot .install-btn { width: 100%; justify-content: flex-start; }
+.sidebar-foot .lang-toggle { align-self: stretch; padding: 2px; }
+.sidebar-foot .lang-toggle button { flex: 1; min-height: 40px; } /* 40 + 2px track = 44px band */

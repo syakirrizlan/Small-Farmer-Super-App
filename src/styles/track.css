@@ -3,10 +3,6 @@
 /* ---------- Modules index ---------- */
 .group .track-module { min-height: 60px; padding-top: 9px; padding-bottom: 9px; }
 .track-module .cell-sub { font-size: 13px; line-height: 18px; }
-.group.track-modules > li + li { box-shadow: none; }
-.track-modules > li + li .track-module::before {
-  content: ""; position: absolute; top: 0; right: 0; left: 58px; height: .5px; background: var(--separator);
-}
 .track-count { font-family: var(--font-rounded); font-variant-numeric: tabular-nums; min-width: 1.5ch; text-align: right; }
 
 /* ---------- Module page ---------- */
@@ -28,18 +24,11 @@
 .track-clear .icon { width: 11px; height: 11px; stroke-width: 3; }
 .track-toolbar .track-add { flex-shrink: 0; min-height: 36px; padding: 0 16px; }
 
-/* Rows: tappable body + quiet trailing delete. */
+/* Rows: the whole row opens the editor (delete lives in the editor sheet). */
 .track-row { display: flex; align-items: stretch; transition: background-color 120ms; }
-.group .track-row-main { flex: 1; min-width: 0; min-height: 60px; padding-right: 8px; }
+.group .track-row-main { flex: 1; min-width: 0; min-height: 60px; }
 .track-row-main .cell-sub { font-size: 15px; }
 .track-row.is-active { background: var(--tint-soft); }
-.track-del {
-  flex-shrink: 0; display: grid; place-items: center; width: 48px; border: 0; padding: 0 4px 0 0;
-  background: transparent; color: var(--label-3); cursor: pointer; transition: color 120ms, background-color 120ms;
-}
-.track-del:hover { color: var(--red); }
-.track-del:active { background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
-.track-del .icon { width: 19px; height: 19px; }
 .track-list.is-dimmed { opacity: .55; transition: opacity 200ms var(--ease); }
 .track-list.is-dimmed:hover, .track-list.is-dimmed:focus-within { opacity: 1; }
 
@@ -54,6 +43,8 @@
   background: var(--bg); border-radius: var(--r-lg);
   box-shadow: 0 0 0 .5px var(--separator), 0 10px 30px -12px rgba(0, 0, 0, .18);
   overflow: hidden; animation: track-sheet-in 240ms var(--ease) both;
+  /* Clear the sticky phone top bar when scrolled into view. */
+  scroll-margin-top: calc(env(safe-area-inset-top) + 56px);
 }
 .track-sheet-bar {
   display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px;
@@ -61,15 +52,20 @@
   box-shadow: inset 0 -.5px 0 var(--separator);
 }
 .track-sheet-title { text-align: center; max-width: 52vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track-sheet-title:focus { outline: none; }
+.track-sheet-title:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 .track-sheet-cancel { justify-self: start; }
 .track-sheet .track-sheet-save { justify-self: end; font-weight: 600; }
 .track-sheet .track-fields { margin: 16px; }
 .track-sheet .track-field { padding-top: 9px; padding-bottom: 9px; }
 .track-label { display: flex; align-items: baseline; gap: 4px; }
-.track-unit { color: var(--label-3); }
+.track-unit { color: var(--label-2); }
 .track-req {
-  margin-left: auto; font: 400 12px/16px var(--font); color: var(--label-3);
+  margin-left: auto; font: 400 13px/18px var(--font); color: var(--label-2);
 }
+/* Destructive action at the foot of the editor. */
+.track-sheet .track-sheet-actions { margin: 0 16px 16px; }
+.track-sheet-delete { justify-content: center; min-height: 44px; font: 400 17px/22px var(--font); }
 .track-field-select, .track-field-date { cursor: pointer; }
 .track-field select.field-input { background-position: calc(100% - 10px) 55%, calc(100% - 5px) 55%; }
 .track-field textarea.field-input { min-height: 72px; line-height: 22px; }
@@ -78,7 +74,7 @@
 @media (prefers-color-scheme: dark) {
   .track-sheet { box-shadow: 0 0 0 .5px var(--separator); }
   .track-sheet { background: var(--bg-elevated); }
-  .track-sheet .track-fields { background: var(--bg-elevated-2); }
+  .track-sheet .track-fields, .track-sheet .track-sheet-actions { background: var(--bg-elevated-2); }
   .track-sheet-bar { background: transparent; }
   .track-field select.field-input option { background: var(--bg-elevated); color: var(--label); }
 }
@@ -87,4 +83,5 @@
 
 @media (max-width: 420px) {
   .track-sheet .track-fields { margin: 12px; }
+  .track-sheet .track-sheet-actions { margin: 0 12px 12px; }
 }
