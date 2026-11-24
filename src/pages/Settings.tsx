@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { InvalidBackupError, exportAll, importAll } from "../db/db";
 import { KeyVault, ProviderPicker } from "../components/AiSetup";
+import { InstallCard } from "../components/InstallButton";
 import { LANGUAGES, useI18n, type TKey } from "../i18n";
 
 export default function Settings() {
@@ -33,6 +34,9 @@ export default function Settings() {
   return (
     <>
       <h1>{t("settings.title")}</h1>
+
+      <h2>{t("install.title")}</h2>
+      <InstallCard />
 
       <h2>{t("settings.language")}</h2>
       <div className="card">

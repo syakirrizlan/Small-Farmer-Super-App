@@ -6,6 +6,7 @@ import ModulesIndex from "./pages/ModulesIndex";
 import Settings from "./pages/Settings";
 import OnlineBadge from "./components/OnlineBadge";
 import LanguageToggle from "./components/LanguageToggle";
+import { InstallButton } from "./components/InstallButton";
 import { useI18n, type TKey } from "./i18n";
 
 // Loaded on demand so the AI SDK isn't part of the first download.
@@ -25,6 +26,7 @@ export default function App() {
       <header className="topbar">
         <span className="brand">🌾 {t("app.brand")}</span>
         <span className="row">
+          <InstallButton />
           <OnlineBadge />
           <LanguageToggle />
         </span>

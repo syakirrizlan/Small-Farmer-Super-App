@@ -9,6 +9,17 @@ const ms: Dict = {
     online: "Dalam talian",
     offline: "Luar talian — disimpan dalam peranti",
   },
+  install: {
+    button: "Pasang aplikasi",
+    buttonTitle: "Pasang Petani Kecil sebagai aplikasi dalam komputer ini",
+    title: "Pasang aplikasi",
+    help: "Pasang Petani Kecil supaya boleh dibuka dari menu Start atau bar tugas dalam tetingkap sendiri. Boleh digunakan tanpa internet.",
+    installed: "✓ Sudah dipasang. Anda sedang menggunakan aplikasi ini.",
+    installedElsewhere: "✓ Sudah dipasang dalam komputer ini. Buka “Small Farmer Super App” dari menu Start atau bar tugas, atau klik “Buka dalam aplikasi” (Open in app) di hujung kanan bar alamat.",
+    manual: "Pelayar anda belum menawarkan pemasangan. Dalam Microsoft Edge atau Google Chrome, klik ikon pasang di hujung kanan bar alamat, atau buka menu pelayar (⋯ atau ⋮) dan pilih “Pasang Small Farmer Super App” (Install Small Farmer Super App). Dalam Edge: Aplikasi → Pasang laman ini sebagai aplikasi. Jika anda nampak “Buka dalam aplikasi” (Open in app), ia sudah dipasang.",
+    done: "Sudah dipasang! Buka “Small Farmer Super App” dari menu Start.",
+    dismissed: "Pemasangan dibatalkan. Anda boleh memasangnya bila-bila masa dari sini.",
+  },
   nav: { home: "Utama", track: "Rekod", assistant: "Pembantu", settings: "Tetapan" },
   common: { cancel: "Batal", save: "Simpan", delete: "Padam", back: "Kembali", untitled: "(tiada tajuk)" },
 
@@ -118,7 +129,7 @@ const ms: Dict = {
     importFailed: "Import gagal",
     invalidBackup: "Fail sandaran tidak sah",
     about: "Perihal",
-    aboutText: "Small Farmer Super App v0.1 — versi awal. Boleh dipasang sebagai aplikasi melalui menu pelayar anda (“Tambah ke Skrin Utama”).",
+    aboutText: "Small Farmer Super App v0.1 — versi awal.",
   },
 
   ai: {
