@@ -26,6 +26,8 @@ interface Session {
 }
 
 let session: Session | null = null;
+/** Bumped on every lock/reset so a slow unlock/create that finishes afterwards is discarded. */
+let epoch = 0;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 const listeners = new Set<() => void>();
 
@@ -86,33 +88,46 @@ function requireSession(): Session {
 /** Create a new, empty vault protected by `passphrase` and leave it unlocked. */
 export async function createVault(passphrase: string) {
   if (passphrase.length < MIN_PASSPHRASE) throw new Error(`Passphrase must be at least ${MIN_PASSPHRASE} characters`);
+  const my = epoch;
   if (await db.secrets.get(VAULT_ID)) throw new Error("A vault already exists. Unlock it instead.");
   const salt = crypto.getRandomValues(new Uint8Array(16)).buffer;
-  session = { aes: await deriveKey(passphrase, salt), salt, keys: {} };
-  await persist(session);
+  const next = { aes: await deriveKey(passphrase, salt), salt, keys: {} };
+  checkEpoch(my);
+  await persist(next);
+  session = next;
   armIdleLock();
   notify();
 }
 
+function checkEpoch(my: number) {
+  if (epoch !== my) throw new Error("The vault was locked or reset. Please try again.");
+}
+
 export async function unlock(passphrase: string) {
+  const my = epoch;
   const row = await db.secrets.get(VAULT_ID);
   if (row) {
     const { aes, text } = await decryptRow(row, passphrase);
+    checkEpoch(my);
     session = { aes, salt: row.salt, keys: JSON.parse(text) };
   } else {
     // Migrate the v0.1 single-key vault (Anthropic only) into the multi-provider vault.
     const legacy = await db.secrets.get(LEGACY_ID);
     if (!legacy) throw new Error("No vault yet");
     const { aes, text } = await decryptRow(legacy, passphrase);
-    session = { aes, salt: legacy.salt, keys: { anthropic: text } };
-    await persist(session);
+    checkEpoch(my);
+    const next = { aes, salt: legacy.salt, keys: { anthropic: text } };
+    await persist(next);
+    checkEpoch(my);
     await db.secrets.delete(LEGACY_ID);
+    session = next;
   }
   armIdleLock();
   notify();
 }
 
 export function lock() {
+  epoch++;
   session = null;
   clearTimeout(idleTimer);
   notify();

@@ -11,14 +11,14 @@ function headers(apiKey?: string): HeadersInit {
   return h;
 }
 
-async function httpError(res: Response, providerName: string): Promise<Error> {
+async function httpError(res: Response, providerName: string, hadKey: boolean): Promise<Error> {
   let detail = "";
   try {
     const body = await res.json();
     detail = body?.error?.message ?? body?.message ?? (typeof body?.error === "string" ? body.error : "");
   } catch { /* non-JSON body */ }
   const msg: Record<number, string> = {
-    401: `Your ${providerName} API key was rejected. Check it in Settings.`,
+    401: hadKey ? `Your ${providerName} API key was rejected. Check it in Settings.` : `${providerName} needs an API key. Add one in Settings.`,
     402: `Your ${providerName} account is out of credit.`,
     403: `This ${providerName} key isn't allowed to use that model.`,
     404: `${providerName} doesn't recognise that model name. Pick another in Settings.`,
@@ -30,7 +30,7 @@ async function httpError(res: Response, providerName: string): Promise<Error> {
 function networkError(err: unknown, providerName: string): Error {
   if (err instanceof DOMException && err.name === "AbortError") return new Error("Stopped.");
   if (err instanceof TypeError) {
-    return new Error(`Can't reach ${providerName}. Check you're online, and for local or custom servers that they allow requests from this app.`);
+    return new Error(`Can't reach ${providerName}. Check you're online and the address is right. Local and custom servers must allow requests from this app (CORS).`);
   }
   return err instanceof Error ? err : new Error(String(err));
 }
@@ -54,7 +54,7 @@ export async function streamOpenAICompatible(req: StreamRequest, providerName: s
   } catch (err) {
     throw networkError(err, providerName);
   }
-  if (!res.ok) throw await httpError(res, providerName);
+  if (!res.ok) throw await httpError(res, providerName, !!req.apiKey);
   if (!res.body) throw new Error(`${providerName} returned an empty response.`);
 
   let text = "";
@@ -101,7 +101,7 @@ export async function listOpenAICompatibleModels(baseURL: string, apiKey: string
   } catch (err) {
     throw networkError(err, providerName);
   }
-  if (!res.ok) throw await httpError(res, providerName);
+  if (!res.ok) throw await httpError(res, providerName, !!apiKey);
   const body = await res.json();
   const ids: string[] = (body?.data ?? body?.models ?? [])
     .map((m: { id?: string; name?: string }) => (m.id ?? m.name ?? "").replace(/^models\//, ""))

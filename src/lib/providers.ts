@@ -6,7 +6,7 @@
  *                             Covers OpenAI, DeepSeek, Gemini (OpenAI endpoint), OpenRouter,
  *                             Groq, Mistral, local Ollama and any custom compatible server.
  *
- * Every host listed here must also be allowed in the CSP `connect-src` in index.html.
+ * The CSP in index.html allows any https host plus http://localhost / 127.0.0.1.
  */
 export type ProviderKind = "anthropic" | "openai-compatible";
 
@@ -122,7 +122,7 @@ export const PROVIDERS: ProviderDef[] = [
     suggestedModels: [],
     keyRequired: false,
     keyPlaceholder: "optional",
-    note: "Any server that speaks the OpenAI chat-completions format. Its address must also be added to the app's security policy (index.html).",
+    note: "Any server that speaks the OpenAI chat-completions format (LM Studio, Together, vLLM, …). Use an https:// address, or http:// for a server on this computer.",
   },
 ];
 

@@ -37,11 +37,11 @@ Deploy `dist/` to any static host with HTTPS (required for PWAs and Web Crypto).
 | Groq | OpenAI-compatible API | Yes |
 | Mistral | OpenAI-compatible API | Yes |
 | Ollama | Local models on the farmer's own computer (`localhost:11434`) | No |
-| Other | Any OpenAI-compatible server (add its host to the CSP in `index.html`) | Optional |
+| Other | Any OpenAI-compatible server (https, or http on this computer) | Optional |
 
 Every provider was checked to accept requests straight from a browser. The OpenAI-compatible path uses plain `fetch` with only `Authorization` and `Content-Type` headers, because some providers (e.g. Mistral) reject the extra headers SDKs add.
 
-The model for each provider is editable; **Load available models** asks the provider which models the key can use. To add a provider, add an entry to `src/lib/providers.ts` and its host to the CSP `connect-src` in `index.html`.
+The model for each provider is editable; **Load available models** asks the provider which models the key can use. To add a built-in provider, add an entry to `src/lib/providers.ts`.
 
 For Ollama, start it with `OLLAMA_ORIGINS` set to the app's address so the browser is allowed to call it.
 
@@ -51,7 +51,7 @@ For Ollama, start it with `OLLAMA_ORIGINS` set to the app's address so the brows
 2. A key is derived from the passphrase (PBKDF2-SHA256, 600k iterations, random salt) and used to encrypt all API keys together with **AES-GCM 256**.
 3. Only the ciphertext + salt + IV (and the last 4 characters of each key, for display) are stored in IndexedDB. The passphrase is never stored.
 4. Unlocking decrypts the keys **into memory only**; they auto-lock after 15 min idle or when the tab closes.
-5. A strict Content-Security-Policy allows network calls only to this site and the listed AI providers, and no third-party scripts.
+5. A strict Content-Security-Policy blocks inline and third-party scripts, so injected code can't run to read keys. Network calls are allowed to any https server (so any AI provider works) and to http servers on this computer.
 6. Requests go **directly from the device to the chosen provider** — there is no backend that sees the keys. Backups never include keys.
 7. Forgot the passphrase? The keys can't be recovered; the farmer can delete them and start again. Farm records are not affected.
 

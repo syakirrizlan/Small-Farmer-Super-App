@@ -16,9 +16,22 @@ export async function getAiSettings(): Promise<AiSettings> {
   return { ...DEFAULTS, ...row, models: { ...(row?.models ?? {}) } };
 }
 
-export async function updateAiSettings(patch: Partial<Omit<AiSettings, "id">>) {
-  const cur = await getAiSettings();
-  await db.settings.put({ ...cur, ...patch, id: "ai" });
+/** Read-modify-write inside one transaction so rapid updates can't overwrite each other. */
+export function updateAiSettings(patch: Partial<Omit<AiSettings, "id">> | ((cur: AiSettings) => Partial<Omit<AiSettings, "id">>)) {
+  return db.transaction("rw", db.settings, async () => {
+    const cur = await getAiSettings();
+    const p = typeof patch === "function" ? patch(cur) : patch;
+    await db.settings.put({ ...cur, ...p, id: "ai" });
+  });
+}
+
+/** Set (or, when blank, clear back to the default) the model for one provider. */
+export function setProviderModel(providerId: string, model: string) {
+  return updateAiSettings((cur) => {
+    const models = { ...cur.models };
+    if (model.trim()) models[providerId] = model; else delete models[providerId];
+    return { models };
+  });
 }
 
 /** Resolved provider + model + base URL for the active choice. */
