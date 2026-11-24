@@ -237,9 +237,7 @@ const en = {
     replaceKey: "Replace {provider} key",
     saving: "Saving…",
     saveKey: "Save key",
-    modelTitle: "Model",
-    selected: "Selected",
-    keySaved: "Key saved",
+    modelTitle: "AI model",
   },
 
   providers: {

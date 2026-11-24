@@ -230,9 +230,7 @@ const ms: Dict = {
     replaceKey: "Ganti kunci {provider}",
     saving: "Menyimpan…",
     saveKey: "Simpan kunci",
-    modelTitle: "Model",
-    selected: "Dipilih",
-    keySaved: "Kunci disimpan",
+    modelTitle: "Model AI",
   },
 
   providers: {
