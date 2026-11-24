@@ -9,23 +9,35 @@ export interface FarmRecord {
   [key: string]: unknown;
 }
 
-/** Encrypted secret blob — never contains plaintext. */
+/** Encrypted secret blob — never contains plaintext keys. */
 export interface SecretRow {
   id: string;
   salt: ArrayBuffer;
   iv: ArrayBuffer;
   ciphertext: ArrayBuffer;
-  hint: string; // last 4 chars of the key, for display only
+  /** Last 4 chars per saved key, for display only. v1 rows used a single `hint`. */
+  hints?: Record<string, string>;
+  hint?: string;
   createdAt: number;
+  updatedAt?: number;
+}
+
+/** Small non-secret key/value settings (e.g. chosen AI provider). */
+export interface SettingRow {
+  id: string;
+  [key: string]: unknown;
 }
 
 class FarmDB extends Dexie {
   secrets!: Table<SecretRow, string>;
+  settings!: Table<SettingRow, string>;
   constructor() {
     super("small-farmer-super-app");
     const schema: Record<string, string> = { secrets: "id" };
     for (const m of MODULES) schema[m.id] = "++id, createdAt, updatedAt";
     this.version(1).stores(schema);
+    // v2: AI provider settings
+    this.version(2).stores({ ...schema, settings: "id" });
   }
   records(moduleId: string): Table<FarmRecord, number> {
     return this.table(moduleId);

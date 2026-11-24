@@ -82,3 +82,15 @@ input, select, textarea { font: inherit; padding: .6rem .7rem; border-radius: 10
 .composer { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom)); display: flex; gap: .5rem; align-items: flex-end;
   background: var(--bg); padding: .5rem 0; }
 .composer textarea { resize: none; }
+
+.small { font-size: .85rem; }
+.link { color: var(--primary); font-weight: 600; }
+.provider-bar { margin-bottom: .75rem; }
+.pill-outline { border: 1px solid var(--border); border-radius: 99px; padding: .25rem .75rem; background: var(--surface); font-size: .9rem; min-width: 0; overflow-wrap: anywhere; }
+.providers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .5rem; margin-bottom: .75rem; }
+.provider { flex-direction: column; align-items: flex-start; gap: .15rem; text-align: left; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); font-weight: 400; min-width: 0; }
+.provider strong { font-size: .92rem; }
+.provider small { color: var(--muted); font-size: .75rem; }
+.provider.active { border: 2px solid var(--primary); background: var(--surface); box-shadow: var(--shadow); }
+button.danger-solid { background: var(--danger); color: #fff; }

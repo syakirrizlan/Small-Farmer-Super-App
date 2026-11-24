@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { streamChat, type ChatTurn } from "../lib/ai";
-import { onVaultChange, vaultStatus } from "../lib/vault";
-import VaultPanel from "../components/VaultPanel";
+import { useAiReadiness } from "../lib/useAi";
+import { KeyVault } from "../components/AiSetup";
 
 const SUGGESTIONS = [
   "What should I focus on this week?",
@@ -11,7 +12,7 @@ const SUGGESTIONS = [
 ];
 
 export default function Assistant() {
-  const [unlocked, setUnlocked] = useState(false);
+  const ai = useAiReadiness();
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,12 +20,7 @@ export default function Assistant() {
   const abort = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const check = () => vaultStatus().then((s) => setUnlocked(s.unlocked));
-    check();
-    return onVaultChange(check);
-  }, []);
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [turns]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [turns]);
 
   const send = async (text: string) => {
     if (!text.trim() || busy) return;
@@ -55,8 +51,16 @@ export default function Assistant() {
   return (
     <>
       <h1>🤖 Farm Assistant</h1>
-      <VaultPanel />
-      {unlocked && (
+      {ai && (
+        <div className="row between provider-bar">
+          <span className="pill-outline">Using <b>{ai.provider.name}</b>{ai.model && <> · <code>{ai.model}</code></>}</span>
+          <Link to="/settings" className="link">Change</Link>
+        </div>
+      )}
+      {ai && !ai.ready && (ai.blocker === "no-url" || ai.blocker === "no-model"
+        ? <p className="card">Finish setting up {ai.provider.name} in <Link to="/settings" className="link">Settings</Link>.</p>
+        : <KeyVault />)}
+      {ai?.ready && (
         <>
           <div className="chat">
             {turns.length === 0 && (
@@ -76,7 +80,7 @@ export default function Assistant() {
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(draft); } }} />
             {busy
               ? <button type="button" className="ghost" onClick={() => abort.current?.abort()}>Stop</button>
-              : <button disabled={!draft.trim() || !navigator.onLine}>Send</button>}
+              : <button disabled={!draft.trim() || (!navigator.onLine && ai.provider.id !== "ollama")}>Send</button>}
           </form>
           {turns.length > 0 && !busy && <button className="ghost small" onClick={() => setTurns([])}>New conversation</button>}
         </>

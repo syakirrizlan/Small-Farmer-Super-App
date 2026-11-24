@@ -1,23 +1,31 @@
 /**
- * API-key vault.
+ * API-key vault — holds keys for any number of AI providers behind ONE passphrase.
  *
- * - The key is encrypted with AES-GCM (256-bit) using a key derived from the user's
- *   passphrase via PBKDF2-SHA256 (600k iterations, random 16-byte salt).
- * - Only the ciphertext is stored (IndexedDB). The passphrase is never stored.
- * - The decrypted key lives only in memory and is wiped on lock, on tab close,
- *   and after IDLE_LOCK_MS without use.
+ * - All keys are stored together as one JSON map, encrypted with AES-GCM (256-bit)
+ *   using a key derived from the passphrase via PBKDF2-SHA256 (600k iterations, random salt).
+ * - Only ciphertext is stored (IndexedDB). The passphrase is never stored.
+ * - While unlocked, the keys and the (non-extractable) AES key live only in memory.
+ *   They are wiped on lock, on tab close, and after IDLE_LOCK_MS without use.
  *
- * Limits (be honest with users): anything running in this page could read the key
- * while unlocked, so we keep a strict CSP and no third-party scripts. Data stays on
- * this device; requests go straight from the device to api.anthropic.com.
+ * Limits (be honest with users): anything running in this page could read the keys
+ * while unlocked, so we keep a strict CSP and no third-party scripts. Requests go
+ * straight from the device to the provider the farmer chose.
  */
-import { db } from "../db/db";
+import { db, type SecretRow } from "../db/db";
 
-const SECRET_ID = "anthropic-api-key";
+const VAULT_ID = "provider-keys";
+const LEGACY_ID = "anthropic-api-key"; // v0.1 single-key vault
 const PBKDF2_ITERATIONS = 600_000;
 const IDLE_LOCK_MS = 15 * 60 * 1000;
+export const MIN_PASSPHRASE = 8;
 
-let unlockedKey: string | null = null;
+interface Session {
+  aes: CryptoKey;
+  salt: ArrayBuffer;
+  keys: Record<string, string>;
+}
+
+let session: Session | null = null;
 let idleTimer: ReturnType<typeof setTimeout> | undefined;
 const listeners = new Set<() => void>();
 
@@ -38,60 +46,127 @@ async function deriveKey(passphrase: string, salt: ArrayBuffer) {
   );
 }
 
+async function decryptRow(row: SecretRow, passphrase: string) {
+  const aes = await deriveKey(passphrase, row.salt);
+  try {
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: row.iv }, aes, row.ciphertext);
+    return { aes, text: new TextDecoder().decode(plain) };
+  } catch {
+    throw new Error("Wrong passphrase");
+  }
+}
+
+const hintsOf = (keys: Record<string, string>) =>
+  Object.fromEntries(Object.entries(keys).map(([p, k]) => [p, k.slice(-4)]));
+
+/** Encrypt the in-memory key map with a fresh IV and store it. */
+async function persist(s: Session) {
+  const iv = crypto.getRandomValues(new Uint8Array(12)).buffer;
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv }, s.aes, new TextEncoder().encode(JSON.stringify(s.keys)),
+  );
+  const existing = await db.secrets.get(VAULT_ID);
+  await db.secrets.put({
+    id: VAULT_ID, salt: s.salt, iv, ciphertext, hints: hintsOf(s.keys),
+    createdAt: existing?.createdAt ?? Date.now(), updatedAt: Date.now(),
+  });
+}
+
 function armIdleLock() {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(lock, IDLE_LOCK_MS);
 }
 
-export async function saveKey(apiKey: string, passphrase: string) {
-  const trimmed = apiKey.trim();
-  if (!trimmed) throw new Error("API key is empty");
-  if (passphrase.length < 8) throw new Error("Passphrase must be at least 8 characters");
+function requireSession(): Session {
+  if (!session) throw new Error("Vault is locked");
+  armIdleLock();
+  return session;
+}
+
+/** Create a new, empty vault protected by `passphrase` and leave it unlocked. */
+export async function createVault(passphrase: string) {
+  if (passphrase.length < MIN_PASSPHRASE) throw new Error(`Passphrase must be at least ${MIN_PASSPHRASE} characters`);
+  if (await db.secrets.get(VAULT_ID)) throw new Error("A vault already exists. Unlock it instead.");
   const salt = crypto.getRandomValues(new Uint8Array(16)).buffer;
-  const iv = crypto.getRandomValues(new Uint8Array(12)).buffer;
-  const aes = await deriveKey(passphrase, salt);
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aes, new TextEncoder().encode(trimmed));
-  await db.secrets.put({ id: SECRET_ID, salt, iv, ciphertext, hint: trimmed.slice(-4), createdAt: Date.now() });
-  unlockedKey = trimmed;
+  session = { aes: await deriveKey(passphrase, salt), salt, keys: {} };
+  await persist(session);
   armIdleLock();
   notify();
 }
 
 export async function unlock(passphrase: string) {
-  const row = await db.secrets.get(SECRET_ID);
-  if (!row) throw new Error("No API key saved yet");
-  try {
-    const aes = await deriveKey(passphrase, row.salt);
-    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: row.iv }, aes, row.ciphertext);
-    unlockedKey = new TextDecoder().decode(plain);
-  } catch {
-    throw new Error("Wrong passphrase");
+  const row = await db.secrets.get(VAULT_ID);
+  if (row) {
+    const { aes, text } = await decryptRow(row, passphrase);
+    session = { aes, salt: row.salt, keys: JSON.parse(text) };
+  } else {
+    // Migrate the v0.1 single-key vault (Anthropic only) into the multi-provider vault.
+    const legacy = await db.secrets.get(LEGACY_ID);
+    if (!legacy) throw new Error("No vault yet");
+    const { aes, text } = await decryptRow(legacy, passphrase);
+    session = { aes, salt: legacy.salt, keys: { anthropic: text } };
+    await persist(session);
+    await db.secrets.delete(LEGACY_ID);
   }
   armIdleLock();
   notify();
 }
 
 export function lock() {
-  unlockedKey = null;
+  session = null;
   clearTimeout(idleTimer);
   notify();
 }
 
-export async function forgetKey() {
-  await db.secrets.delete(SECRET_ID);
+export async function setProviderKey(providerId: string, apiKey: string) {
+  const trimmed = apiKey.trim();
+  if (!trimmed) throw new Error("API key is empty");
+  const s = requireSession();
+  s.keys = { ...s.keys, [providerId]: trimmed };
+  await persist(s);
+  notify();
+}
+
+export async function removeProviderKey(providerId: string) {
+  const s = requireSession();
+  const { [providerId]: _removed, ...rest } = s.keys;
+  s.keys = rest;
+  await persist(s);
+  notify();
+}
+
+/** Delete the vault and every saved key from this device. */
+export async function resetVault() {
+  await db.secrets.bulkDelete([VAULT_ID, LEGACY_ID]);
   lock();
 }
 
-export async function vaultStatus() {
-  const row = await db.secrets.get(SECRET_ID);
-  return { saved: !!row, hint: row?.hint ?? null, unlocked: unlockedKey !== null };
+export interface VaultStatus {
+  exists: boolean;
+  unlocked: boolean;
+  /** providerId → last 4 chars, readable while locked. */
+  hints: Record<string, string>;
 }
 
-/** Returns the in-memory key and refreshes the idle timer. */
-export function useKey(): string {
-  if (!unlockedKey) throw new Error("Vault is locked");
+export async function vaultStatus(): Promise<VaultStatus> {
+  const row = await db.secrets.get(VAULT_ID);
+  const legacy = row ? undefined : await db.secrets.get(LEGACY_ID);
+  const hints = row?.hints ?? (legacy?.hint ? { anthropic: legacy.hint } : {});
+  return { exists: !!(row || legacy), unlocked: session !== null, hints };
+}
+
+/** The in-memory key for a provider (refreshes the idle timer). Throws if locked or missing. */
+export function getProviderKey(providerId: string): string {
+  const key = requireSession().keys[providerId];
+  if (!key) throw new Error("No API key saved for this provider");
+  return key;
+}
+
+/** Like getProviderKey but returns undefined instead of throwing (for optional keys). */
+export function peekProviderKey(providerId: string): string | undefined {
+  if (!session) return undefined;
   armIdleLock();
-  return unlockedKey;
+  return session.keys[providerId];
 }
 
 if (typeof window !== "undefined") window.addEventListener("pagehide", lock);

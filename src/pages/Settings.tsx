@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { exportAll, importAll } from "../db/db";
-import VaultPanel from "../components/VaultPanel";
+import { KeyVault, ProviderPicker } from "../components/AiSetup";
 
 export default function Settings() {
   const [msg, setMsg] = useState("");
@@ -25,11 +25,12 @@ export default function Settings() {
     <>
       <h1>⚙️ Settings</h1>
       <h2>AI assistant</h2>
-      <VaultPanel />
+      <ProviderPicker />
+      <KeyVault />
 
       <h2>Your data</h2>
       <div className="card">
-        <p className="muted">All farm records are stored only on this device and work offline. Back them up regularly. (Backups never include your API key.)</p>
+        <p className="muted">All farm records are stored only on this device and work offline. Back them up regularly. (Backups never include your API keys.)</p>
         <div className="row">
           <button onClick={doExport}>Export backup</button>
           <label className="button ghost">Import backup
