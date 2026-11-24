@@ -14,12 +14,14 @@ const SUGGESTIONS: TKey[] = [
 ];
 
 export default function Assistant() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const ai = useAiReadiness();
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [prevLang, setPrevLang] = useState(lang);
+  if (lang !== prevLang) { setPrevLang(lang); setError(""); }
   const abort = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 

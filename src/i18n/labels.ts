@@ -8,4 +8,5 @@ export const moduleDescription = (m: ModuleDef) => tDynamic(`modules.${m.id}.des
 export const fieldLabel = (m: ModuleDef, f: FieldDef) => tDynamic(`modules.${m.id}.fields.${f.key}`, f.label);
 export const unitLabel = (unit: string) => tDynamic(`units.${unit}`, unit);
 export const providerName = (p: ProviderDef) => tDynamic(`providers.${p.id}.name`, p.name);
+export const providerKeyPlaceholder = (p: ProviderDef) => tDynamic(`providers.${p.id}.keyPlaceholder`, p.keyPlaceholder);
 export const providerNote = (p: ProviderDef) => tDynamic(`providers.${p.id}.note`, p.note ?? "") || undefined;

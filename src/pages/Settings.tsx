@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { exportAll, importAll } from "../db/db";
+import { InvalidBackupError, exportAll, importAll } from "../db/db";
 import { KeyVault, ProviderPicker } from "../components/AiSetup";
-import { LANGUAGES, useI18n } from "../i18n";
+import { LANGUAGES, useI18n, type TKey } from "../i18n";
 
 export default function Settings() {
   const { t, lang, setLang } = useI18n();
-  const [msg, setMsg] = useState("");
+  // Store the message key (not translated text) so it follows language changes.
+  const [msg, setMsg] = useState<{ key: TKey; detail?: string } | null>(null);
 
   const doExport = async () => {
     const blob = new Blob([JSON.stringify(await exportAll(), null, 2)], { type: "application/json" });
@@ -14,16 +15,19 @@ export default function Settings() {
     a.download = `farm-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
-    setMsg(t("settings.backupDownloaded"));
+    setMsg({ key: "settings.backupDownloaded" });
   };
 
   const doImport = async (file?: File) => {
     if (!file || !confirm(t("settings.importConfirm"))) return;
     let json: unknown;
     try { json = JSON.parse(await file.text()); }
-    catch { setMsg(t("settings.invalidBackup")); return; }
-    try { await importAll(json as Parameters<typeof importAll>[0]); setMsg(t("settings.backupRestored")); }
-    catch (e) { setMsg(e instanceof Error ? e.message : t("settings.importFailed")); }
+    catch { setMsg({ key: "settings.invalidBackup" }); return; }
+    try { await importAll(json as Parameters<typeof importAll>[0]); setMsg({ key: "settings.backupRestored" }); }
+    catch (e) {
+      if (e instanceof InvalidBackupError) setMsg({ key: "settings.invalidBackup" });
+      else setMsg({ key: "settings.importFailed", detail: e instanceof Error ? `${e.name}: ${e.message}` : undefined });
+    }
   };
 
   return (
@@ -56,7 +60,7 @@ export default function Settings() {
             <input type="file" accept="application/json" hidden onChange={(e) => doImport(e.target.files?.[0])} />
           </label>
         </div>
-        {msg && <p>{msg}</p>}
+        {msg && <p>{t(msg.key)}{msg.detail && <small className="muted"> ({msg.detail})</small>}</p>}
       </div>
 
       <h2>{t("settings.about")}</h2>

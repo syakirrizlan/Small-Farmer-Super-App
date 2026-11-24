@@ -7,7 +7,7 @@ import {
 } from "../lib/vault";
 import { useAiSettings, useVaultStatus } from "../lib/useAi";
 import { t, useI18n } from "../i18n";
-import { providerName, providerNote } from "../i18n/labels";
+import { providerKeyPlaceholder, providerName, providerNote } from "../i18n/labels";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -39,7 +39,7 @@ export function ProviderPicker() {
 }
 
 function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: VaultStatus }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { provider, model, baseURL } = resolve(settings);
   // Inputs render from local drafts (not from IndexedDB) so typing is never interrupted.
   const [modelDraft, setModelDraft] = useState(settings.models[provider.id] ?? "");
@@ -47,6 +47,8 @@ function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: Vau
   const [models, setModels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [prevLang, setPrevLang] = useState(lang);
+  if (lang !== prevLang) { setPrevLang(lang); setError(""); }
 
   const loadModels = async () => {
     setLoading(true); setError("");
@@ -110,7 +112,7 @@ function KeyLink({ url, label }: { url?: string; label: string }) {
 
 /** Create / unlock the vault, and add or remove the key for the active provider. */
 export function KeyVault() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const settings = useAiSettings();
   const vault = useVaultStatus();
   const [apiKey, setApiKey] = useState("");
@@ -124,6 +126,9 @@ export function KeyVault() {
   const pid = settings?.activeProvider;
   const [prevPid, setPrevPid] = useState(pid);
   if (pid !== prevPid) { setPrevPid(pid); setApiKey(""); setError(""); setConfirmReset(false); setOptIn(false); }
+  // Messages are translated when shown, so drop them when the language changes.
+  const [prevLang, setPrevLang] = useState(lang);
+  if (lang !== prevLang) { setPrevLang(lang); setError(""); }
   if (!settings || !vault) return null;
   const provider = getProvider(settings.activeProvider) ?? PROVIDERS[0];
   const name = providerName(provider);
@@ -155,7 +160,7 @@ export function KeyVault() {
         <h3>{t("ai.saveKeyTitle", { provider: name })}</h3>
         <p className="muted">{t("ai.vaultHelp")}<KeyLink url={provider.keyUrl} label={t("ai.getKeyAt")} /></p>
         <label htmlFor="new-key"><span>{t("ai.apiKeyLabel", { provider: name })}</span>
-          <input id="new-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={provider.keyPlaceholder} required spellCheck={false} />
+          <input id="new-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} required spellCheck={false} />
         </label>
         <label htmlFor="new-pass"><span>{t("ai.newPassphrase", { min: MIN_PASSPHRASE })}</span>
           <input id="new-pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
@@ -208,7 +213,7 @@ export function KeyVault() {
           <KeyLink url={provider.keyUrl} label={t("ai.getOneAt")} /></p>
       )}
       <label htmlFor="provider-key"><span>{t(hint ? "ai.replaceKey" : "ai.addKey", { provider: name })}</span>
-        <input id="provider-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={provider.keyPlaceholder} spellCheck={false} />
+        <input id="provider-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} spellCheck={false} />
       </label>
       {error && <p className="error">{error}</p>}
       <div className="row"><button disabled={busy || !apiKey.trim()}>{busy ? t("ai.saving") : t("ai.saveKey")}</button></div>

@@ -76,7 +76,7 @@ export async function streamOpenAICompatible(req: StreamRequest, providerName: s
         if (!data || data === "[DONE]") continue;
         let chunk;
         try { chunk = JSON.parse(data); } catch { continue; }
-        if (chunk.error) throw new Error(`${t("errors.providerError", { provider: providerName, status: "stream" })}: ${chunk.error.message ?? JSON.stringify(chunk.error)}`);
+        if (chunk.error) throw new Error(`${t("errors.streamError", { provider: providerName })}: ${chunk.error.message ?? JSON.stringify(chunk.error)}`);
         const choice = chunk.choices?.[0];
         const delta: unknown = choice?.delta?.content;
         if (typeof delta === "string" && delta) {

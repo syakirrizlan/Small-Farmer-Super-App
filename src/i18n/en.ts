@@ -192,8 +192,8 @@ const en = {
     openrouter: { name: "OpenRouter (many models)", note: "One key, hundreds of models from many companies." },
     groq: { name: "Groq", note: "" },
     mistral: { name: "Mistral", note: "" },
-    ollama: { name: "Ollama (on this computer)", note: "Free and private: runs on your own machine. Start Ollama with OLLAMA_ORIGINS set to this app's address." },
-    custom: { name: "Other (OpenAI-compatible)", note: "Any server that speaks the OpenAI chat-completions format (LM Studio, Together, vLLM, …). Use an https:// address, or http:// for a server on this computer." },
+    ollama: { name: "Ollama (on this computer)", keyPlaceholder: "(not needed)", note: "Free and private: runs on your own machine. Start Ollama with OLLAMA_ORIGINS set to this app's address." },
+    custom: { name: "Other (OpenAI-compatible)", keyPlaceholder: "optional", note: "Any server that speaks the OpenAI chat-completions format (LM Studio, Together, vLLM, …). Use an https:// address, or http:// for a server on this computer." },
   },
 
   errors: {
@@ -215,6 +215,7 @@ const en = {
     stopped: "Stopped.",
     cantReach: "Can't reach {provider}. Check you're online and the address is right. Local and custom servers must allow requests from this app (CORS).",
     providerError: "{provider} error ({status})",
+    streamError: "{provider} error during reply",
     emptyResponse: "{provider} returned an empty response.",
     noAnswer: "{provider} returned no answer. Try again or pick another model.",
     setAddress: "Set the server address for this provider in Settings.",
