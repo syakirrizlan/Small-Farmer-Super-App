@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { PROVIDERS, getProvider } from "../lib/providers";
+import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import { PROVIDERS, getProvider, type ProviderDef } from "../lib/providers";
 import { resolve, setProviderModel, updateAiSettings, type AiSettings } from "../lib/settings";
 import { listModels } from "../lib/ai";
 import {
@@ -8,8 +8,38 @@ import {
 import { useAiSettings, useVaultStatus } from "../lib/useAi";
 import { t, useI18n } from "../i18n";
 import { providerKeyPlaceholder, providerName, providerNote } from "../i18n/labels";
+import Icon, { type IconName } from "./Icon";
+import "../styles/settings.css";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const tileStyle = (color: string) => ({ "--tile": color }) as CSSProperties;
+
+/** Neutral tile colours, assigned by position so neighbouring providers never share one. */
+/* Only hues that stay dark enough for a white initial; settings.css darkens them further. */
+const PROVIDER_TILES = ["var(--brown)", "var(--blue)", "var(--indigo)", "var(--red)", "var(--purple)"];
+
+function ProviderTile({ p, index }: { p: ProviderDef; index: number }) {
+  if (p.id === "custom") return <span className="tile set-custom-tile" aria-hidden="true"><Icon name="cpu" /></span>;
+  return (
+    <span className="tile set-initial" style={tileStyle(PROVIDER_TILES[index % PROVIDER_TILES.length])} aria-hidden="true">
+      {providerName(p).trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+/** Status row used by the key vault: icon tile, title, subtitle, optional trailing control. */
+function StatusCell({ icon, color, title, sub, children }: { icon: IconName; color: string; title: ReactNode; sub?: ReactNode; children?: ReactNode }) {
+  return (
+    <li className="cell set-status-cell">
+      <span className="tile" style={tileStyle(color)}><Icon name={icon} /></span>
+      <span className="cell-body">
+        <span className="cell-title">{title}</span>
+        {sub && <span className="cell-sub">{sub}</span>}
+      </span>
+      {children}
+    </li>
+  );
+}
 
 /** Choose an AI provider + model. */
 export function ProviderPicker() {
@@ -20,21 +50,37 @@ export function ProviderPicker() {
   const { provider } = resolve(settings);
 
   return (
-    <div className="card form">
-      <h3>{t("ai.providerTitle")}</h3>
-      <p className="muted">{t("ai.providerHelp")}</p>
-      <div className="providers" role="radiogroup" aria-label={t("ai.providerGroup")}>
-        {PROVIDERS.map((p) => (
-          <button key={p.id} type="button" role="radio" aria-checked={p.id === provider.id}
-            className={`provider ${p.id === provider.id ? "active" : ""}`} onClick={() => updateAiSettings({ activeProvider: p.id })}>
-            <strong>{providerName(p)}</strong>
-            <small>{vault.hints[p.id] ? `🔑 …${vault.hints[p.id]}` : p.keyRequired ? t("ai.noKeyYet") : t("ai.noKeyNeeded")}</small>
-          </button>
-        ))}
-      </div>
+    <>
+      <section className="section">
+        <h2 className="section-title" id="set-provider-title">{t("ai.providerTitle")}</h2>
+        <ul className="group set-providers" role="radiogroup" aria-label={t("ai.providerGroup")}>
+          {PROVIDERS.map((p, i) => {
+            const active = p.id === provider.id;
+            const hint = vault.hints[p.id];
+            return (
+              <li key={p.id}>
+                <button type="button" role="radio" aria-checked={active}
+                  className={`cell cell-link provider ${active ? "active" : ""}`} onClick={() => updateAiSettings({ activeProvider: p.id })}>
+                  <ProviderTile p={p} index={i} />
+                  <span className="cell-body">
+                    <strong className="cell-title">{providerName(p)}</strong>
+                    <small className="cell-sub set-key-status">
+                      {hint
+                        ? <><Icon name="key" size={14} aria-hidden="true" /><span className="set-mono">…{hint}</span></>
+                        : p.keyRequired ? t("ai.noKeyYet") : t("ai.noKeyNeeded")}
+                    </small>
+                  </span>
+                  <Icon name="checkmark" className="set-check" aria-hidden="true" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="section-foot">{t("ai.providerHelp")}</p>
+      </section>
       {/* Keyed by provider so typed drafts and errors never carry over to another provider. */}
       <ProviderDetails key={provider.id} settings={settings} vault={vault} />
-    </div>
+    </>
   );
 }
 
@@ -61,38 +107,45 @@ function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: Vau
   const canList = !!baseURL && (!provider.keyRequired || (vault.unlocked && !!vault.hints[provider.id]));
   const urlWarning = urlProblem(urlDraft);
   const note = providerNote(provider);
+  const blocked = !baseURL ? t("ai.enterAddressFirst") : !vault.hints[provider.id] ? t("ai.addKeyFirst") : t("ai.unlockFirst");
 
   return (
-    <>
-      {note && <p className="muted small">{note}</p>}
-
-      {provider.id === "custom" && (
-        <label htmlFor="custom-url"><span>{t("ai.serverAddress")}</span>
-          <input id="custom-url" type="url" placeholder="https://example.com/v1" value={urlDraft} spellCheck={false}
-            onChange={(e) => { setUrlDraft(e.target.value); updateAiSettings({ customBaseURL: e.target.value }); }} />
-          {urlDraft && urlWarning && <small className="error">{urlWarning}</small>}
+    <section className="section">
+      <h2 className="section-title">{t("ai.modelTitle")}</h2>
+      {note && <p className="section-foot set-note">{note}</p>}
+      <div className="group">
+        {provider.id === "custom" && (
+          <label className="field" htmlFor="custom-url"><span className="field-label">{t("ai.serverAddress")}</span>
+            <input id="custom-url" className="field-input" type="url" placeholder="https://example.com/v1" value={urlDraft} spellCheck={false}
+              onChange={(e) => { setUrlDraft(e.target.value); updateAiSettings({ customBaseURL: e.target.value }); }} />
+            {urlDraft && urlWarning && <small className="field-hint error">{urlWarning}</small>}
+          </label>
+        )}
+        <label className="field" htmlFor="model"><span className="field-label">{t("ai.model")}</span>
+          <input id="model" className="field-input set-mono-input" list="model-options" value={modelDraft} spellCheck={false}
+            autoCapitalize="off" autoCorrect="off"
+            placeholder={t("ai.modelName")} aria-describedby={!modelDraft && provider.defaultModel ? "model-default" : undefined}
+            onChange={(e) => { setModelDraft(e.target.value); setProviderModel(provider.id, e.target.value); }} />
+          {!modelDraft && provider.defaultModel && (
+            <small id="model-default" className="field-hint">{t("ai.modelDefault", { model: provider.defaultModel })}</small>
+          )}
+          <datalist id="model-options">{options.map((m) => <option key={m} value={m} />)}</datalist>
         </label>
-      )}
-
-      <label htmlFor="model"><span>{t("ai.model")}</span>
-        <input id="model" list="model-options" value={modelDraft} spellCheck={false}
-          placeholder={provider.defaultModel ? t("ai.modelDefault", { model: provider.defaultModel }) : t("ai.modelName")}
-          onChange={(e) => { setModelDraft(e.target.value); setProviderModel(provider.id, e.target.value); }} />
-        <datalist id="model-options">{options.map((m) => <option key={m} value={m} />)}</datalist>
-      </label>
-      <div className="row">
-        <button type="button" className="ghost" disabled={loading || !canList} onClick={loadModels}
-          title={canList ? "" : baseURL ? t("ai.unlockFirst") : t("ai.enterAddressFirst")}>
-          {loading ? t("ai.loadingModels") : t("ai.loadModels")}
+        <button type="button" className="cell cell-link set-action" disabled={loading || !canList} onClick={loadModels}
+          title={canList ? "" : blocked}>
+          <span className="cell-body"><span className="cell-title">{loading ? t("ai.loadingModels") : t("ai.loadModels")}</span></span>
+          {loading
+            ? <span className="set-spinner" aria-hidden="true" />
+            : models.length > 0 && <span className="cell-value num">{t("ai.modelsFound", { count: models.length })}</span>}
         </button>
-        {models.length > 0 && <small className="muted">{t("ai.modelsFound", { count: models.length })}</small>}
       </div>
-      {!model && <p className="error">{t("ai.enterModel")}</p>}
-      {error && <p className="error">{error}</p>}
-      <p className="muted small">
+      {!model && <p className="section-foot set-error" role="alert">{t("ai.enterModel")}</p>}
+      {error && <p className="section-foot set-error" role="alert">{error}</p>}
+      {!canList && !loading && <p className="section-foot">{blocked}</p>}
+      <p className="section-foot">
         {t("ai.dataNotice", { provider: providerName(provider), model: model ? t("ai.dataNoticeModel", { model }) : "" })}
       </p>
-    </>
+    </section>
   );
 }
 
@@ -143,9 +196,16 @@ export function KeyVault() {
   if (!vault.exists) {
     if (!provider.keyRequired && !optIn) {
       return (
-        <div className="card row between">
-          <span className="muted">{t("ai.worksWithoutKey", { provider: name })}</span>
-          <button type="button" className="ghost small" onClick={() => setOptIn(true)}>{t("ai.serverNeedsKey")}</button>
+        <div className="set-vault">
+          <ul className="group">
+            <StatusCell icon="checkmark" color="var(--green)" title={t("ai.worksWithoutKey", { provider: name })} />
+            <li>
+              <button type="button" className="cell cell-link set-action" onClick={() => setOptIn(true)}>
+                <span className="cell-body"><span className="cell-title">{t("ai.serverNeedsKey")}</span></span>
+                <Icon name="chevron" className="chev" />
+              </button>
+            </li>
+          </ul>
         </div>
       );
     }
@@ -156,20 +216,26 @@ export function KeyVault() {
       run(async () => { await createVault(pass); await setProviderKey(provider.id, apiKey); });
     };
     return (
-      <form className="card form" onSubmit={submit} autoComplete="off">
-        <h3>{t("ai.saveKeyTitle", { provider: name })}</h3>
-        <p className="muted">{t("ai.vaultHelp")}<KeyLink url={provider.keyUrl} label={t("ai.getKeyAt")} /></p>
-        <label htmlFor="new-key"><span>{t("ai.apiKeyLabel", { provider: name })}</span>
-          <input id="new-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} required spellCheck={false} />
-        </label>
-        <label htmlFor="new-pass"><span>{t("ai.newPassphrase", { min: MIN_PASSPHRASE })}</span>
-          <input id="new-pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
-        </label>
-        <label htmlFor="new-pass2"><span>{t("ai.repeatPassphrase")}</span>
-          <input id="new-pass2" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <div className="row"><button disabled={busy}>{busy ? t("ai.encrypting") : t("ai.saveSecurely")}</button></div>
+      <form className="set-vault" onSubmit={submit} autoComplete="off">
+        <div className="group">
+          <ul className="set-flat">
+            <StatusCell icon="key" color="var(--orange)" title={<strong className="set-strong">{t("ai.saveKeyTitle", { provider: name })}</strong>} />
+          </ul>
+          <label className="field" htmlFor="new-key"><span className="field-label">{t("ai.apiKeyLabel", { provider: name })}</span>
+            <input id="new-key" className="field-input" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} required spellCheck={false} />
+          </label>
+          <label className="field" htmlFor="new-pass"><span className="field-label">{t("ai.newPassphrase", { min: MIN_PASSPHRASE })}</span>
+            <input id="new-pass" className="field-input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
+          </label>
+          <label className="field" htmlFor="new-pass2"><span className="field-label">{t("ai.repeatPassphrase")}</span>
+            <input id="new-pass2" className="field-input" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
+          </label>
+        </div>
+        <p className="section-foot">{t("ai.vaultHelp")}<KeyLink url={provider.keyUrl} label={t("ai.getKeyAt")} /></p>
+        {error && <p className="section-foot set-error" role="alert">{error}</p>}
+        <button className="btn btn-block set-primary" disabled={busy}>
+          <Icon name="lock" size={20} aria-hidden="true" />{busy ? t("ai.encrypting") : t("ai.saveSecurely")}
+        </button>
       </form>
     );
   }
@@ -177,46 +243,60 @@ export function KeyVault() {
   if (!vault.unlocked) {
     const saved = Object.keys(vault.hints).map((id) => { const p = getProvider(id); return p ? providerName(p) : id; });
     return (
-      <form className="card form" onSubmit={(e) => { e.preventDefault(); run(() => unlock(pass)); }}>
-        <h3>{t("ai.keysLocked")}</h3>
-        <p className="muted">{saved.length ? t("ai.savedKeys", { list: saved.join(", ") }) : t("ai.noKeysSaved")} {t("ai.unlockHelp")}</p>
-        <label htmlFor="unlock-pass"><span>{t("ai.passphrase")}</span>
-          <input id="unlock-pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)} required autoComplete="current-password" />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <div className="row">
-          <button disabled={busy}>{busy ? t("ai.unlocking") : t("ai.unlock")}</button>
-          {!confirmReset
-            ? <button type="button" className="ghost danger" disabled={busy} onClick={() => setConfirmReset(true)}>{t("ai.forgotPassphrase")}</button>
-            : <button type="button" className="danger-solid" disabled={busy} onClick={() => run(resetVault)}>{t("ai.deleteAllKeys")}</button>}
+      <form className="set-vault" onSubmit={(e) => { e.preventDefault(); run(() => unlock(pass)); }}>
+        <div className="group">
+          <ul className="set-flat">
+            <StatusCell icon="lock" color="var(--blue)" title={<strong className="set-strong">{t("ai.keysLocked")}</strong>}
+              sub={saved.length ? t("ai.savedKeys", { list: saved.join(", ") }) : t("ai.noKeysSaved")} />
+          </ul>
+          <label className="field" htmlFor="unlock-pass"><span className="field-label">{t("ai.passphrase")}</span>
+            <input id="unlock-pass" className="field-input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} required autoComplete="current-password" />
+          </label>
         </div>
-        {confirmReset && <p className="muted small">{t("ai.resetHelp")}</p>}
+        <p className="section-foot">{t("ai.unlockHelp")}</p>
+        {error && <p className="section-foot set-error" role="alert">{error}</p>}
+        <button className="btn btn-block set-primary" disabled={busy}>
+          <Icon name="unlock" size={20} aria-hidden="true" />{busy ? t("ai.unlocking") : t("ai.unlock")}
+        </button>
+        {!confirmReset
+          ? <button type="button" className="btn-plain btn-destructive set-forgot" disabled={busy} onClick={() => setConfirmReset(true)}>{t("ai.forgotPassphrase")}</button>
+          : (
+            <div className="set-reset" role="alertdialog" aria-labelledby="set-reset-text">
+              <p id="set-reset-text" className="set-reset-text">{t("ai.resetHelp")}</p>
+              <button type="button" className="btn btn-danger btn-block" disabled={busy} onClick={() => run(resetVault)}>
+                <Icon name="trash" size={20} aria-hidden="true" />{t("ai.deleteAllKeys")}
+              </button>
+              <button type="button" className="btn-plain set-forgot" disabled={busy} onClick={() => setConfirmReset(false)}>{t("common.cancel")}</button>
+            </div>
+          )}
       </form>
     );
   }
 
   const hint = vault.hints[provider.id];
   return (
-    <form className="card form" autoComplete="off" onSubmit={(e) => { e.preventDefault(); run(() => setProviderKey(provider.id, apiKey)); }}>
-      <div className="row between">
-        <h3>{t("ai.keysUnlocked")}</h3>
-        <button type="button" className="ghost small" onClick={lock}>{t("ai.lock")}</button>
-      </div>
-      <p className="muted small">{t("ai.autoLock")}</p>
-      {hint ? (
-        <div className="row between">
-          <span>{name}: <code>…{hint}</code></span>
-          <button type="button" className="ghost danger small" disabled={busy} onClick={() => run(() => removeProviderKey(provider.id))}>{t("ai.remove")}</button>
-        </div>
-      ) : (
-        <p>{provider.keyRequired ? t("ai.noProviderKey", { provider: name }) : t("ai.optionalKey", { provider: name })}
+    <form className="set-vault" autoComplete="off" onSubmit={(e) => { e.preventDefault(); run(() => setProviderKey(provider.id, apiKey)); }}>
+      <ul className="group">
+        <StatusCell icon="unlock" color="var(--green)" title={<strong className="set-strong">{t("ai.keysUnlocked")}</strong>} sub={t("ai.autoLock")}>
+          <button type="button" className="btn-plain set-trailing" onClick={lock}>{t("ai.lock")}</button>
+        </StatusCell>
+        {hint && (
+          <StatusCell icon="key" color="var(--orange)" title={name} sub={<span className="set-mono">…{hint}</span>}>
+            <button type="button" className="btn-plain btn-destructive set-trailing" disabled={busy} onClick={() => run(() => removeProviderKey(provider.id))}>{t("ai.remove")}</button>
+          </StatusCell>
+        )}
+      </ul>
+      {!hint && (
+        <p className="section-foot">{provider.keyRequired ? t("ai.noProviderKey", { provider: name }) : t("ai.optionalKey", { provider: name })}
           <KeyLink url={provider.keyUrl} label={t("ai.getOneAt")} /></p>
       )}
-      <label htmlFor="provider-key"><span>{t(hint ? "ai.replaceKey" : "ai.addKey", { provider: name })}</span>
-        <input id="provider-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} spellCheck={false} />
-      </label>
-      {error && <p className="error">{error}</p>}
-      <div className="row"><button disabled={busy || !apiKey.trim()}>{busy ? t("ai.saving") : t("ai.saveKey")}</button></div>
+      <div className="group set-gap">
+        <label className="field" htmlFor="provider-key"><span className="field-label">{t(hint ? "ai.replaceKey" : "ai.addKey", { provider: name })}</span>
+          <input id="provider-key" className="field-input" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} spellCheck={false} />
+        </label>
+      </div>
+      {error && <p className="section-foot set-error" role="alert">{error}</p>}
+      <button className="btn btn-block set-primary" disabled={busy || !apiKey.trim()}>{busy ? t("ai.saving") : t("ai.saveKey")}</button>
     </form>
   );
 }

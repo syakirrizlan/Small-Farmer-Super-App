@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
+import Icon from "../components/Icon";
+import "../styles/settings.css";
 import { InvalidBackupError, exportAll, importAll } from "../db/db";
 import { KeyVault, ProviderPicker } from "../components/AiSetup";
 import { InstallCard } from "../components/InstallButton";
 import { LANGUAGES, useI18n, type TKey } from "../i18n";
+
+const tile = (color: string) => ({ "--tile": color }) as CSSProperties;
 
 export default function Settings() {
   const { t, lang, setLang } = useI18n();
@@ -32,43 +36,82 @@ export default function Settings() {
   };
 
   return (
-    <>
-      <h1>{t("settings.title")}</h1>
+    <div className="page set-page">
+      <header className="page-head">
+        <h1 className="t-large">{t("settings.title")}</h1>
+      </header>
 
-      <h2>{t("install.title")}</h2>
-      <InstallCard />
+      <section className="section">
+        <h2 className="section-title">{t("install.title")}</h2>
+        <InstallCard />
+      </section>
 
-      <h2>{t("settings.language")}</h2>
-      <div className="card">
-        <p className="muted">{t("settings.languageHelp")}</p>
-        <div className="row" role="radiogroup" aria-label={t("settings.language")}>
-          {LANGUAGES.map((l) => (
-            <button key={l.id} type="button" role="radio" lang={l.id} aria-checked={lang === l.id}
-              className={lang === l.id ? "" : "ghost"} onClick={() => setLang(l.id)}>
-              {l.label}
-            </button>
-          ))}
+      <section className="section">
+        <h2 className="section-title" id="set-lang-title">{t("settings.language")}</h2>
+        <div className="group set-lang">
+          <div className="segmented block" role="radiogroup" aria-labelledby="set-lang-title">
+            {LANGUAGES.map((l) => (
+              <button key={l.id} type="button" role="radio" lang={l.id} aria-checked={lang === l.id}
+                onClick={() => setLang(l.id)}>
+                {l.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+        <p className="section-foot">{t("settings.languageHelp")}</p>
+      </section>
 
-      <h2>{t("settings.aiAssistant")}</h2>
       <ProviderPicker />
-      <KeyVault />
 
-      <h2>{t("settings.yourData")}</h2>
-      <div className="card">
-        <p className="muted">{t("settings.dataHelp")}</p>
-        <div className="row">
-          <button onClick={doExport}>{t("settings.exportBackup")}</button>
-          <label className="button ghost">{t("settings.importBackup")}
-            <input type="file" accept="application/json" hidden onChange={(e) => doImport(e.target.files?.[0])} />
-          </label>
-        </div>
-        {msg && <p>{t(msg.key)}{msg.detail && <small className="muted"> ({msg.detail})</small>}</p>}
-      </div>
+      <section className="section">
+        <h2 className="section-title">{t("settings.apiKeys")}</h2>
+        <KeyVault />
+      </section>
 
-      <h2>{t("settings.about")}</h2>
-      <div className="card"><p className="muted">{t("settings.aboutText")}</p></div>
-    </>
+      <section className="section">
+        <h2 className="section-title">{t("settings.yourData")}</h2>
+        <ul className="group">
+          <li>
+            <button type="button" className="cell cell-link" onClick={doExport}>
+              <span className="tile" style={tile("var(--blue)")}><Icon name="upload" /></span>
+              <span className="cell-body"><span className="cell-title">{t("settings.exportBackup")}</span></span>
+              <Icon name="chevron" className="chev" />
+            </button>
+          </li>
+          <li>
+            <label className="cell cell-link set-file" tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.currentTarget.querySelector("input")?.click(); } }}>
+              <span className="tile" style={tile("var(--indigo)")}><Icon name="download" /></span>
+              <span className="cell-body"><span className="cell-title">{t("settings.importBackup")}</span></span>
+              <Icon name="chevron" className="chev" />
+              <input type="file" accept="application/json" hidden onChange={(e) => { doImport(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+          </li>
+        </ul>
+        {msg && (
+          <p className={`section-foot set-status ${msg.key === "settings.backupDownloaded" || msg.key === "settings.backupRestored" ? "ok" : "set-error"}`} role="status">
+            {t(msg.key)}{msg.detail && <span className="muted"> ({msg.detail})</span>}
+          </p>
+        )}
+        <p className="section-foot">{t("settings.dataHelp")}</p>
+      </section>
+
+      <section className="section">
+        <h2 className="section-title">{t("settings.about")}</h2>
+        <ul className="group">
+          <li className="cell">
+            <span className="tile" style={tile("var(--tint)")}><Icon name="leaf" /></span>
+            <span className="cell-body">
+              <span className="cell-title">{t("app.brand")}</span>
+              <span className="cell-sub">{t("app.tagline")}</span>
+            </span>
+          </li>
+          <li className="cell">
+            <span className="cell-body"><span className="cell-title">{t("settings.version")}</span></span>
+            <span className="cell-value num">{t("settings.versionValue")}</span>
+          </li>
+        </ul>
+      </section>
+    </div>
   );
 }

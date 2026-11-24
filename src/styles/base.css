@@ -1,0 +1,166 @@
+/* Base elements + shared building blocks. See docs/DESIGN.md for anatomy. */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--label);
+  font: 400 17px/1.3 var(--font); letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: var(--tint); text-decoration: none; }
+code { font-family: var(--font-mono); font-size: .88em; }
+img, svg { max-width: 100%; }
+.icon { flex-shrink: 0; display: block; }
+:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 6px; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Type ---------- */
+h1, h2, h3, p { margin: 0; }
+.t-large { font: 700 34px/41px var(--font-display); letter-spacing: 0.01em; text-wrap: balance; }
+.t-title2 { font: 700 22px/28px var(--font-display); letter-spacing: 0.01em; }
+.t-title3 { font: 600 20px/25px var(--font-display); letter-spacing: 0.01em; }
+.t-headline { font: 600 17px/22px var(--font); letter-spacing: -0.02em; }
+.t-body { font: 400 17px/22px var(--font); letter-spacing: -0.02em; }
+.t-callout { font: 400 16px/21px var(--font); letter-spacing: -0.02em; }
+.t-subhead { font: 400 15px/20px var(--font); letter-spacing: -0.01em; }
+.t-footnote { font: 400 13px/18px var(--font); letter-spacing: -0.005em; }
+.t-caption { font: 400 12px/16px var(--font); }
+.muted { color: var(--label-2); }
+.faint { color: var(--label-3); }
+.num { font-family: var(--font-rounded); font-variant-numeric: tabular-nums; }
+.error { color: var(--red-text); font: 400 15px/20px var(--font); }
+
+/* ---------- Page ---------- */
+.page { display: flex; flex-direction: column; gap: 28px; animation: page-in 240ms var(--ease) both; }
+.page-head { display: flex; flex-direction: column; gap: 4px; padding-top: 4px; }
+.page-sub { color: var(--label-2); font: 400 15px/20px var(--font); }
+.back-link { display: inline-flex; align-items: center; gap: 2px; color: var(--tint); font: 400 17px/22px var(--font); margin-left: -6px; min-height: 44px; }
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Sections & grouped lists ---------- */
+.section { display: flex; flex-direction: column; gap: 8px; }
+.section-title { font: 400 13px/18px var(--font); text-transform: uppercase; letter-spacing: 0.02em; color: var(--label-2); padding: 0 16px; }
+.section-title.lg { text-transform: none; font: 700 22px/28px var(--font-display); color: var(--label); padding: 0 4px; letter-spacing: .01em; }
+.section-foot { font: 400 13px/18px var(--font); color: var(--label-2); padding: 0 16px; }
+
+.group { list-style: none; margin: 0; padding: 0; background: var(--bg-elevated); border-radius: var(--r-md); overflow: hidden; }
+.group :focus-visible { outline-offset: -2px; border-radius: inherit; } /* inside the ring: .group clips overflow */
+/* Hairline separators, inset to where the row's text starts (native list style). Each separator
+   takes its inset from the row below it: 16px flush with padding, 58px after a 30px .tile,
+   72px after a 44px .tile-lg or .dash-cal date block. Override --sep-inset on a row if needed. */
+.group > li + li, .group > .cell + .cell, .group > * + .field { position: relative; }
+.group > li + li::before, .group > .cell + .cell::before, .group > * + .field::before {
+  content: ""; position: absolute; top: 0; right: 0; left: var(--sep-inset, 16px);
+  height: .5px; background: var(--separator); pointer-events: none; z-index: 1;
+}
+.group > :is(li, .cell, .field):has(.tile) { --sep-inset: 58px; }
+.group > :is(li, .cell, .field):has(.tile-lg, .dash-cal) { --sep-inset: 72px; }
+.cell {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 44px;
+  padding: 10px 16px; width: 100%; background: transparent; color: var(--label);
+  border: 0; text-align: left; font: inherit;
+}
+.group > li > .cell { min-height: inherit; }
+.cell-link { cursor: pointer; transition: background-color 120ms; }
+.cell-link:active { background: var(--fill); }
+@media (hover: hover) { .cell-link:hover { background: color-mix(in srgb, var(--fill) 55%, transparent); } }
+.cell-body { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.cell-title { font: 400 17px/22px var(--font); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.cell-sub { font: 400 15px/20px var(--font); color: var(--label-2); overflow-wrap: anywhere; }
+.cell-value { color: var(--label-2); font: 400 17px/22px var(--font); white-space: nowrap; }
+.cell .chev { color: var(--label-3); width: 14px; height: 14px; stroke-width: 2.6; margin-right: -4px; }
+.cell-action { color: var(--tint); }
+.cell-destructive { color: var(--red-text); }
+
+/* Rounded icon tile (Settings-style). Set --tile on the element. */
+.tile {
+  --tile: var(--tint);
+  display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 7px;
+  background: var(--tile); color: #fff; flex-shrink: 0;
+}
+.tile .icon { width: 19px; height: 19px; stroke-width: 2; }
+.tile-lg { width: 44px; height: 44px; border-radius: 11px; }
+.tile-lg .icon { width: 26px; height: 26px; }
+
+/* ---------- Cards ---------- */
+.card { background: var(--bg-elevated); border-radius: var(--r-lg); padding: 16px; }
+
+/* ---------- Buttons ---------- */
+.btn, .btn-tinted, .btn-plain, .btn-gray {
+  -webkit-appearance: none; appearance: none; border: 0; cursor: pointer; font: 600 17px/22px var(--font); letter-spacing: -0.02em;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 50px; padding: 0 20px; border-radius: 14px; text-align: center;
+  transition: transform 120ms var(--ease), background-color 120ms, opacity 120ms;
+}
+.btn { background: var(--tint); color: var(--on-tint); }
+.btn:active { background: var(--tint-pressed); }
+.btn-tinted { background: var(--tint-soft); color: var(--tint); }
+.btn-gray { background: var(--fill); color: var(--label); }
+.btn-plain { background: transparent; color: var(--tint); font-weight: 400; padding: 0 8px; min-height: 44px; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-destructive { color: var(--red-text); }
+.btn:active, .btn-tinted:active, .btn-gray:active { transform: scale(0.97); }
+.btn-sm { min-height: 32px; padding: 0 14px; border-radius: 999px; font: 600 15px/20px var(--font); position: relative; }
+/* Invisible 44px hit area around compact controls (look unchanged). */
+.btn-sm::after, .icon-btn::after { content: ""; position: absolute; inset: -6px -2px; }
+.icon-btn { position: relative; }
+.btn-block { width: 100%; }
+.btn[disabled], .btn-tinted[disabled], .btn-plain[disabled], .btn-gray[disabled] { opacity: 0.4; cursor: default; transform: none; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 999px; border: 0; cursor: pointer;
+  background: var(--fill); color: var(--tint); transition: transform 120ms var(--ease);
+}
+.icon-btn:active { transform: scale(0.92); }
+.icon-btn[disabled] { opacity: .4; cursor: default; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-row > * { flex: 1 1 140px; }
+
+/* ---------- Forms (inside .group) ---------- */
+.field { display: flex; flex-direction: column; gap: 2px; padding: 10px 16px; min-height: 44px; cursor: text; }
+.field-label { font: 400 13px/18px var(--font); color: var(--label-2); }
+.field-input {
+  -webkit-appearance: none; appearance: none; width: 100%; border: 0; outline: 0; background: transparent;
+  color: var(--label); font: 400 17px/22px var(--font); letter-spacing: -0.02em; padding: 2px 0; min-height: 26px;
+}
+.field-input::placeholder { color: var(--label-3); }
+select.field-input { cursor: pointer; background-image: linear-gradient(45deg, transparent 50%, var(--label-3) 50%), linear-gradient(135deg, var(--label-3) 50%, transparent 50%); background-position: calc(100% - 10px) 55%, calc(100% - 5px) 55%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 20px; }
+textarea.field-input { resize: vertical; min-height: 66px; }
+.field:focus-within .field-label { color: var(--tint); }
+.field-hint { font: 400 13px/18px var(--font); color: var(--label-2); }
+.field-hint.error { color: var(--red-text); }
+input[type="date"].field-input { min-height: 26px; }
+
+/* Search field */
+.search-field { display: flex; align-items: center; gap: 6px; background: var(--fill); border-radius: 10px; padding: 0 8px; height: 36px; color: var(--label-2); }
+.search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--label); font: 400 17px/22px var(--font); }
+.search-field input::placeholder { color: var(--label-2); }
+.search-field .icon { width: 17px; height: 17px; }
+
+/* Segmented control */
+.segmented { display: inline-flex; padding: 2px; gap: 2px; background: var(--fill); border-radius: 9px; }
+.segmented button {
+  border: 0; background: transparent; color: var(--label); font: 500 13px/18px var(--font); cursor: pointer;
+  padding: 5px 14px; border-radius: 7px; min-height: 28px; transition: background-color 160ms, box-shadow 160ms;
+}
+.segmented button[aria-pressed="true"], .segmented button[aria-checked="true"] {
+  background: var(--bg-elevated); box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .04); font-weight: 600;
+}
+@media (prefers-color-scheme: dark) { .segmented button[aria-pressed="true"], .segmented button[aria-checked="true"] { background: #636366; } }
+.segmented.block { display: flex; } .segmented.block button { flex: 1; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font: 600 12px/16px var(--font); background: var(--fill); color: var(--label-2); }
+.badge-red { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--red-text); }
+.badge-orange { background: color-mix(in srgb, var(--orange) 16%, transparent); color: var(--orange-text); }
+.badge-green { background: var(--tint-soft); color: var(--tint); }
+
+/* Empty state */
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 24px; color: var(--label-2); }
+.empty .icon { width: 44px; height: 44px; color: var(--label-3); stroke-width: 1.4; margin-bottom: 4px; }
+.empty h3 { color: var(--label); font: 600 20px/25px var(--font-display); }
+.empty p { font: 400 15px/20px var(--font); max-width: 32ch; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}

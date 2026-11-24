@@ -1,0 +1,75 @@
+/* Dashboard (Home / Today). Area-specific styles only; tokens from tokens.css. */
+
+.dash-date { text-transform: none; }
+.dash-date::first-letter { text-transform: uppercase; }
+
+/* ---------- Stat widgets ---------- */
+.dash-stats {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+@media (min-width: 640px) { .dash-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.dash-stat {
+  position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; min-height: 124px;
+  padding: 14px 14px 13px; border-radius: var(--r-lg); background: var(--bg-elevated); color: var(--label);
+  transition: transform 160ms var(--ease), background-color 120ms;
+}
+.dash-stat:active { transform: scale(0.97); }
+@media (hover: hover) { .dash-stat:hover { background: color-mix(in srgb, var(--bg-elevated) 94%, var(--label)); } }
+.dash-stat-top { display: flex; align-items: flex-start; justify-content: space-between; padding-bottom: 14px; }
+.dash-stat-chev { width: 13px; height: 13px; stroke-width: 2.6; color: var(--label-3); margin-top: 2px; }
+.dash-stat-value { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.dash-stat-value strong {
+  font: 700 30px/34px var(--font-rounded); font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  color: var(--label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.dash-stat-label { font: 500 13px/17px var(--font); color: var(--label-2); letter-spacing: -0.005em; }
+.dash-stat-pos .dash-stat-value strong { color: var(--tint); }
+.dash-stat-neg .dash-stat-value strong { color: var(--red-text); }
+
+.dash-stat { container-type: inline-size; }
+/* Long values (e.g. "−RM 10,549.50") shrink to fit the widget width: ~0.6em per glyph. */
+.dash-stat-long .dash-stat-value strong {
+  font-size: clamp(15px, calc(100cqi / (var(--chars, 6) * 0.6)), 30px);
+  line-height: 34px;
+}
+
+@media (max-width: 400px) {
+  .dash-stat-value strong { font-size: 26px; line-height: 32px; }
+  .dash-stat-long .dash-stat-value strong {
+    font-size: clamp(15px, calc(100cqi / (var(--chars, 6) * 0.6)), 26px); line-height: 32px;
+  }
+}
+
+/* ---------- Section header with trailing link ---------- */
+.dash-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-right: 8px; }
+.dash-see-all { font: 400 15px/20px var(--font); color: var(--tint); min-height: 44px; display: inline-flex; align-items: center; padding: 0 8px; margin: -12px 0; }
+
+.dash-sub-warn { color: var(--orange-text); }
+
+/* ---------- Calendar date block ---------- */
+.dash-up { min-height: 60px; }
+.dash-cal {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 10px; background: var(--fill); overflow: hidden;
+}
+.dash-cal-mon {
+  font: 600 10px/12px var(--font); text-transform: uppercase; letter-spacing: 0.04em; color: var(--red-text);
+}
+.dash-cal-day {
+  font: 600 20px/22px var(--font-rounded); font-variant-numeric: tabular-nums; color: var(--label);
+}
+.dash-cal.is-today { background: var(--tint-soft); }
+.dash-cal.is-today .dash-cal-mon, .dash-cal.is-today .dash-cal-day { color: var(--tint); }
+.dash-cal.is-late { background: color-mix(in srgb, var(--orange) 15%, transparent); }
+.dash-cal.is-late .dash-cal-mon, .dash-cal.is-late .dash-cal-day { color: var(--orange-text); }
+
+/* ---------- Empty state ---------- */
+.dash-empty .empty { padding: 32px 24px 28px; }
+.dash-empty-btn { margin-top: 8px; gap: 4px; position: relative; }
+/* Visual pill stays 32px; invisible extension gives a 44px tap area. */
+.dash-empty-btn::after { content: ""; position: absolute; inset: -6px 0; }
+.dash-empty .empty .dash-empty-btn .icon { stroke-width: 2.2; width: 16px; height: 16px; color: inherit; margin: 0; }
+
+/* ---------- Assistant entry ---------- */
+.dash-assist { min-height: 60px; }

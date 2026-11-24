@@ -1,0 +1,65 @@
+/* Settings area: install row, language, AI provider list, key vault, data, about. Tokens only. */
+
+/* ---------- Shared bits ---------- */
+.set-mono, .set-mono-input { font-family: var(--font-mono); font-size: .9em; letter-spacing: 0; }
+.set-mono-input { font-size: 16px; }
+/* Two classes so it beats .section-foot (base.css) whatever order the bundle puts the CSS in. */
+.section-foot.set-error, .set-error { color: var(--red-text); }
+.set-status { display: flex; align-items: center; gap: 6px; }
+.section-foot.set-status.ok, .set-status.ok { color: var(--tint); }
+.set-strong { font-weight: 600; }
+.set-note { padding-bottom: 2px; }
+
+/* ---------- Install ---------- */
+.set-install-row { padding-top: 12px; padding-bottom: 12px; gap: 14px; }
+.set-install-row .cell-title.t-headline { font: 600 17px/22px var(--font); }
+.set-install-row .btn-sm { min-height: 34px; flex-shrink: 0; }
+.set-install-tile { box-shadow: inset 0 0 0 .5px color-mix(in srgb, var(--label) 8%, transparent); }
+
+/* ---------- Language ---------- */
+.set-lang { padding: 8px; }
+.set-lang .segmented { padding: 3px; border-radius: 10px; }
+.set-lang .segmented button { position: relative; min-height: 38px; font: 500 15px/20px var(--font); letter-spacing: -0.01em; border-radius: 8px; }
+/* Stretch the hit area over the track padding and the gap so each option is a 44px target. */
+.set-lang .segmented button::after { content: ""; position: absolute; inset: -3px -1px; }
+.set-lang .segmented button[aria-checked="true"] { font-weight: 600; }
+
+/* ---------- Provider list ---------- */
+.set-providers .provider { min-height: 58px; padding-top: 8px; padding-bottom: 8px; }
+/* Darkened so the white initial passes 4.5:1 in both themes. */
+.tile.set-initial { font: 700 15px/1 var(--font-rounded); letter-spacing: 0; background: color-mix(in srgb, var(--tile) 70%, #000); }
+/* "Other (OpenAI-compatible)": opaque neutral grey (about 4.7:1 for the white glyph in light, 5:1 in dark). */
+.tile.set-custom-tile { background: color-mix(in srgb, var(--label) 55%, var(--bg-elevated)); }
+@media (prefers-color-scheme: dark) { .tile.set-custom-tile { background: color-mix(in srgb, var(--label) 35%, var(--bg-elevated)); } }
+.set-providers .cell-title { font-weight: 400; }
+.set-providers .provider.active .cell-title { font-weight: 600; }
+.set-key-status { display: inline-flex; align-items: center; gap: 5px; }
+.set-key-status .icon { color: var(--label-2); }
+.set-check { width: 20px; height: 20px; stroke-width: 2.4; color: var(--tint); opacity: 0; transform: scale(.6);
+  transition: opacity 180ms var(--ease), transform 220ms var(--ease); }
+.provider.active .set-check { opacity: 1; transform: none; }
+
+/* Plain tint action row inside a group (e.g. "Load available models"). */
+.set-action { color: var(--tint); cursor: pointer; }
+.set-action .cell-title { color: inherit; }
+.set-action[disabled] { color: var(--label-3); cursor: default; }
+.set-action[disabled]:hover, .set-action[disabled]:active { background: transparent; }
+.set-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--fill-strong); border-top-color: var(--label-2);
+  animation: set-spin 800ms linear infinite; }
+@keyframes set-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Key vault ---------- */
+.set-vault { display: flex; flex-direction: column; gap: 8px; }
+.set-flat { list-style: none; margin: 0; padding: 0; }
+.set-status-cell { padding-top: 11px; padding-bottom: 11px; }
+.set-trailing { min-height: 44px; padding: 0 4px 0 12px; margin-right: -4px; flex-shrink: 0; }
+.set-gap { margin-top: 12px; }
+.set-primary { margin-top: 8px; width: 100%; }
+.set-forgot { align-self: center; font-size: 17px; }
+.set-reset { display: flex; flex-direction: column; gap: 10px; padding: 16px; margin-top: 4px; border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--red) 9%, var(--bg-elevated)); animation: set-in 220ms var(--ease) both; }
+.set-reset-text { font: 400 15px/20px var(--font); color: var(--label); }
+@keyframes set-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Data ---------- */
+.set-file { cursor: pointer; }
