@@ -1,5 +1,6 @@
 import Dexie, { type Table } from "dexie";
 import { MODULES } from "./modules";
+import { t } from "../i18n";
 
 /** A generic tracked record. Module-specific values live as extra keys. */
 export interface FarmRecord {
@@ -61,7 +62,7 @@ export async function exportAll() {
 }
 
 export async function importAll(json: { data?: Record<string, FarmRecord[]> }) {
-  if (!json?.data) throw new Error("Not a valid backup file");
+  if (!json?.data) throw new Error(t("settings.invalidBackup"));
   await db.transaction("rw", MODULES.map((m) => m.id), async () => {
     for (const m of MODULES) {
       const rows = json.data![m.id];

@@ -1,6 +1,7 @@
 /** Provider-neutral prompt pieces shared by every AI backend. */
 import { db } from "../../db/db";
 import { MODULES } from "../../db/modules";
+import { getLang, t } from "../../i18n";
 
 export interface ChatTurn {
   role: "user" | "assistant";
@@ -36,4 +37,11 @@ export async function farmSnapshot(maxPerModule = 25) {
   return `Today is ${new Date().toISOString().slice(0, 10)}.\n\n# Farm snapshot\n${parts.join("\n\n")}`;
 }
 
-export const REFUSAL_TEXT = "Sorry — I can't help with that request. Try rephrasing, or ask about something else on your farm.";
+export const refusalText = () => t("errors.refusal");
+
+/** Tells the model which language to answer in, following the app's language setting. */
+export function languageInstruction(): string {
+  return getLang() === "ms"
+    ? "Reply in Bahasa Melayu (Malaysian Malay, not Indonesian), using simple everyday words a farmer in Malaysia would use. If the farmer writes in another language, reply in that language."
+    : "Reply in English. If the farmer writes in another language, reply in that language.";
+}

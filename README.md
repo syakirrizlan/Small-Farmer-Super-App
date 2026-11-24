@@ -12,6 +12,7 @@ An installable, offline-first **PWA** that helps small-scale farmers track every
 | 🗺️ Plots · 🌱 Crops · 🐄 Livestock · ✅ Tasks · 📦 Inventory · 💰 Money · 📓 Journal | Add / edit / search / delete records — all stored on the device |
 | 🤖 Assistant | Chat about your farm with the AI provider you picked; it sees a snapshot of your records |
 | ⚙️ Settings | Pick AI provider + model, manage API keys, export / import JSON backups |
+| 🌐 Languages | English and Bahasa Melayu; switch any time with the EN / BM toggle or in Settings |
 | 📶 Offline | App shell cached by a service worker; data lives in IndexedDB |
 
 ## Run it
@@ -24,6 +25,14 @@ npm run preview    # serve the production build (service worker active)
 ```
 
 Deploy `dist/` to any static host with HTTPS (required for PWAs and Web Crypto).
+
+## Languages
+
+The app speaks **English** and **Bahasa Melayu**. It starts in Bahasa Melayu when the device language is Malay, and the choice is remembered on the device. The AI assistant answers in the chosen language.
+
+- Strings live in `src/i18n/en.ts` (source) and `src/i18n/ms.ts`. TypeScript fails the build if a Malay string is missing.
+- Dropdown choices (e.g. crop status) are **saved in English** and only displayed translated, so records stay valid when the language changes, and search works with either language.
+- To add a language: copy `ms.ts`, translate it, and register it in `LANGUAGES` / `DICTS` in `src/i18n/index.ts`.
 
 ## AI providers
 
@@ -79,6 +88,5 @@ Add an entry to `MODULES` in `src/db/modules.ts` and bump the version in `src/db
 
 - Photos per record (crop disease, animals), harvest yield charts, weather
 - Reminders / push notifications for tasks
-- Multi-language (e.g. Bahasa Melayu)
 - Optional cloud sync and multi-device / multi-worker accounts
 - AI tools: let the assistant create tasks or log entries directly

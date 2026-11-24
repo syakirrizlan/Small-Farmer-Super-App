@@ -5,39 +5,45 @@ import ModulePage from "./pages/ModulePage";
 import ModulesIndex from "./pages/ModulesIndex";
 import Settings from "./pages/Settings";
 import OnlineBadge from "./components/OnlineBadge";
+import LanguageToggle from "./components/LanguageToggle";
+import { useI18n, type TKey } from "./i18n";
 
 // Loaded on demand so the AI SDK isn't part of the first download.
 const Assistant = lazy(() => import("./pages/Assistant"));
 
-const NAV = [
-  { to: "/", label: "Home", icon: "🏡" },
-  { to: "/track", label: "Track", icon: "📋" },
-  { to: "/assistant", label: "Assistant", icon: "🤖" },
-  { to: "/settings", label: "Settings", icon: "⚙️" },
+const NAV: { to: string; label: TKey; icon: string }[] = [
+  { to: "/", label: "nav.home", icon: "🏡" },
+  { to: "/track", label: "nav.track", icon: "📋" },
+  { to: "/assistant", label: "nav.assistant", icon: "🤖" },
+  { to: "/settings", label: "nav.settings", icon: "⚙️" },
 ];
 
 export default function App() {
+  const { t } = useI18n();
   return (
     <div className="shell">
       <header className="topbar">
-        <span className="brand">🌾 Small Farmer</span>
-        <OnlineBadge />
+        <span className="brand">🌾 {t("app.brand")}</span>
+        <span className="row">
+          <OnlineBadge />
+          <LanguageToggle />
+        </span>
       </header>
       <main className="content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/track" element={<ModulesIndex />} />
           <Route path="/track/:moduleId" element={<ModulePage />} />
-          <Route path="/assistant" element={<Suspense fallback={<p>Loading…</p>}><Assistant /></Suspense>} />
+          <Route path="/assistant" element={<Suspense fallback={<p>{t("app.loading")}</p>}><Assistant /></Suspense>} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<p>Page not found.</p>} />
+          <Route path="*" element={<p>{t("app.notFound")}</p>} />
         </Routes>
       </main>
       <nav className="tabbar">
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === "/"} className="tab">
             <span aria-hidden>{n.icon}</span>
-            <small>{n.label}</small>
+            <small>{t(n.label)}</small>
           </NavLink>
         ))}
       </nav>

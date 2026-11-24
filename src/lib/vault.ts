@@ -12,6 +12,7 @@
  * straight from the device to the provider the farmer chose.
  */
 import { db, type SecretRow } from "../db/db";
+import { t } from "../i18n";
 
 const VAULT_ID = "provider-keys";
 const LEGACY_ID = "anthropic-api-key"; // v0.1 single-key vault
@@ -54,7 +55,7 @@ async function decryptRow(row: SecretRow, passphrase: string) {
     const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: row.iv }, aes, row.ciphertext);
     return { aes, text: new TextDecoder().decode(plain) };
   } catch {
-    throw new Error("Wrong passphrase");
+    throw new Error(t("errors.wrongPassphrase"));
   }
 }
 
@@ -80,16 +81,16 @@ function armIdleLock() {
 }
 
 function requireSession(): Session {
-  if (!session) throw new Error("Vault is locked");
+  if (!session) throw new Error(t("errors.vaultLocked"));
   armIdleLock();
   return session;
 }
 
 /** Create a new, empty vault protected by `passphrase` and leave it unlocked. */
 export async function createVault(passphrase: string) {
-  if (passphrase.length < MIN_PASSPHRASE) throw new Error(`Passphrase must be at least ${MIN_PASSPHRASE} characters`);
+  if (passphrase.length < MIN_PASSPHRASE) throw new Error(t("errors.passphraseTooShort", { min: MIN_PASSPHRASE }));
   const my = epoch;
-  if (await db.secrets.get(VAULT_ID)) throw new Error("A vault already exists. Unlock it instead.");
+  if (await db.secrets.get(VAULT_ID)) throw new Error(t("errors.vaultExists"));
   const salt = crypto.getRandomValues(new Uint8Array(16)).buffer;
   const next = { aes: await deriveKey(passphrase, salt), salt, keys: {} };
   checkEpoch(my);
@@ -100,7 +101,7 @@ export async function createVault(passphrase: string) {
 }
 
 function checkEpoch(my: number) {
-  if (epoch !== my) throw new Error("The vault was locked or reset. Please try again.");
+  if (epoch !== my) throw new Error(t("errors.vaultReset"));
 }
 
 export async function unlock(passphrase: string) {
@@ -113,7 +114,7 @@ export async function unlock(passphrase: string) {
   } else {
     // Migrate the v0.1 single-key vault (Anthropic only) into the multi-provider vault.
     const legacy = await db.secrets.get(LEGACY_ID);
-    if (!legacy) throw new Error("No vault yet");
+    if (!legacy) throw new Error(t("errors.noVault"));
     const { aes, text } = await decryptRow(legacy, passphrase);
     checkEpoch(my);
     const next = { aes, salt: legacy.salt, keys: { anthropic: text } };
@@ -135,7 +136,7 @@ export function lock() {
 
 export async function setProviderKey(providerId: string, apiKey: string) {
   const trimmed = apiKey.trim();
-  if (!trimmed) throw new Error("API key is empty");
+  if (!trimmed) throw new Error(t("errors.emptyKey"));
   const s = requireSession();
   s.keys = { ...s.keys, [providerId]: trimmed };
   await persist(s);
@@ -173,7 +174,7 @@ export async function vaultStatus(): Promise<VaultStatus> {
 /** The in-memory key for a provider (refreshes the idle timer). Throws if locked or missing. */
 export function getProviderKey(providerId: string): string {
   const key = requireSession().keys[providerId];
-  if (!key) throw new Error("No API key saved for this provider");
+  if (!key) throw new Error(t("errors.noKeyForProvider"));
   return key;
 }
 

@@ -6,11 +6,14 @@ import {
   MIN_PASSPHRASE, createVault, lock, removeProviderKey, resetVault, setProviderKey, unlock, type VaultStatus,
 } from "../lib/vault";
 import { useAiSettings, useVaultStatus } from "../lib/useAi";
+import { t, useI18n } from "../i18n";
+import { providerName, providerNote } from "../i18n/labels";
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Choose an AI provider + model. */
 export function ProviderPicker() {
+  const { t } = useI18n();
   const settings = useAiSettings();
   const vault = useVaultStatus();
   if (!settings || !vault) return null;
@@ -18,14 +21,14 @@ export function ProviderPicker() {
 
   return (
     <div className="card form">
-      <h3>🧠 AI provider</h3>
-      <p className="muted">Use whichever AI company you like. You can switch at any time; your farm records stay on this device.</p>
-      <div className="providers" role="radiogroup" aria-label="AI provider">
+      <h3>{t("ai.providerTitle")}</h3>
+      <p className="muted">{t("ai.providerHelp")}</p>
+      <div className="providers" role="radiogroup" aria-label={t("ai.providerGroup")}>
         {PROVIDERS.map((p) => (
           <button key={p.id} type="button" role="radio" aria-checked={p.id === provider.id}
             className={`provider ${p.id === provider.id ? "active" : ""}`} onClick={() => updateAiSettings({ activeProvider: p.id })}>
-            <strong>{p.name}</strong>
-            <small>{vault.hints[p.id] ? `🔑 …${vault.hints[p.id]}` : p.keyRequired ? "No key yet" : "No key needed"}</small>
+            <strong>{providerName(p)}</strong>
+            <small>{vault.hints[p.id] ? `🔑 …${vault.hints[p.id]}` : p.keyRequired ? t("ai.noKeyYet") : t("ai.noKeyNeeded")}</small>
           </button>
         ))}
       </div>
@@ -36,6 +39,7 @@ export function ProviderPicker() {
 }
 
 function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: VaultStatus }) {
+  const { t } = useI18n();
   const { provider, model, baseURL } = resolve(settings);
   // Inputs render from local drafts (not from IndexedDB) so typing is never interrupted.
   const [modelDraft, setModelDraft] = useState(settings.models[provider.id] ?? "");
@@ -54,35 +58,38 @@ function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: Vau
   const options = [...new Set([...models, ...provider.suggestedModels])];
   const canList = !!baseURL && (!provider.keyRequired || (vault.unlocked && !!vault.hints[provider.id]));
   const urlWarning = urlProblem(urlDraft);
+  const note = providerNote(provider);
 
   return (
     <>
-      {provider.note && <p className="muted small">{provider.note}</p>}
+      {note && <p className="muted small">{note}</p>}
 
       {provider.id === "custom" && (
-        <label htmlFor="custom-url"><span>Server address (the part before /chat/completions)</span>
+        <label htmlFor="custom-url"><span>{t("ai.serverAddress")}</span>
           <input id="custom-url" type="url" placeholder="https://example.com/v1" value={urlDraft} spellCheck={false}
             onChange={(e) => { setUrlDraft(e.target.value); updateAiSettings({ customBaseURL: e.target.value }); }} />
           {urlDraft && urlWarning && <small className="error">{urlWarning}</small>}
         </label>
       )}
 
-      <label htmlFor="model"><span>Model</span>
+      <label htmlFor="model"><span>{t("ai.model")}</span>
         <input id="model" list="model-options" value={modelDraft} spellCheck={false}
-          placeholder={provider.defaultModel ? `${provider.defaultModel} (default)` : "model name"}
+          placeholder={provider.defaultModel ? t("ai.modelDefault", { model: provider.defaultModel }) : t("ai.modelName")}
           onChange={(e) => { setModelDraft(e.target.value); setProviderModel(provider.id, e.target.value); }} />
         <datalist id="model-options">{options.map((m) => <option key={m} value={m} />)}</datalist>
       </label>
       <div className="row">
         <button type="button" className="ghost" disabled={loading || !canList} onClick={loadModels}
-          title={canList ? "" : baseURL ? "Unlock your key first" : "Enter the server address first"}>
-          {loading ? "Loading…" : "Load available models"}
+          title={canList ? "" : baseURL ? t("ai.unlockFirst") : t("ai.enterAddressFirst")}>
+          {loading ? t("ai.loadingModels") : t("ai.loadModels")}
         </button>
-        {models.length > 0 && <small className="muted">{models.length} models found</small>}
+        {models.length > 0 && <small className="muted">{t("ai.modelsFound", { count: models.length })}</small>}
       </div>
-      {!model && <p className="error">Enter a model name.</p>}
+      {!model && <p className="error">{t("ai.enterModel")}</p>}
       {error && <p className="error">{error}</p>}
-      <p className="muted small">Your questions and a summary of your farm records are sent to <b>{provider.name}</b>{model && <> (model <code>{model}</code>)</>}. Check their data policy if that matters to you.</p>
+      <p className="muted small">
+        {t("ai.dataNotice", { provider: providerName(provider), model: model ? t("ai.dataNoticeModel", { model }) : "" })}
+      </p>
     </>
   );
 }
@@ -90,14 +97,20 @@ function ProviderDetails({ settings, vault }: { settings: AiSettings; vault: Vau
 /** Mirrors the CSP connect-src in index.html: any https server, or http on this computer. */
 function urlProblem(url: string): string | null {
   let u: URL;
-  try { u = new URL(url); } catch { return "Enter a full address, e.g. https://example.com/v1"; }
+  try { u = new URL(url); } catch { return t("ai.urlFull"); }
   if (u.protocol === "https:") return null;
   if (u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1")) return null;
-  return "Use an https:// address (plain http only works for servers on this computer).";
+  return t("ai.urlHttps");
+}
+
+function KeyLink({ url, label }: { url?: string; label: string }) {
+  if (!url) return null;
+  return <> {label} <a href={url} target="_blank" rel="noreferrer">{new URL(url).host}</a>.</>;
 }
 
 /** Create / unlock the vault, and add or remove the key for the active provider. */
 export function KeyVault() {
+  const { t } = useI18n();
   const settings = useAiSettings();
   const vault = useVaultStatus();
   const [apiKey, setApiKey] = useState("");
@@ -113,6 +126,7 @@ export function KeyVault() {
   if (pid !== prevPid) { setPrevPid(pid); setApiKey(""); setError(""); setConfirmReset(false); setOptIn(false); }
   if (!settings || !vault) return null;
   const provider = getProvider(settings.activeProvider) ?? PROVIDERS[0];
+  const name = providerName(provider);
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); setError("");
@@ -125,56 +139,53 @@ export function KeyVault() {
     if (!provider.keyRequired && !optIn) {
       return (
         <div className="card row between">
-          <span className="muted">{provider.name} works without a key.</span>
-          <button type="button" className="ghost small" onClick={() => setOptIn(true)}>My server needs a key</button>
+          <span className="muted">{t("ai.worksWithoutKey", { provider: name })}</span>
+          <button type="button" className="ghost small" onClick={() => setOptIn(true)}>{t("ai.serverNeedsKey")}</button>
         </div>
       );
     }
     const submit = (e: FormEvent) => {
       e.preventDefault();
-      if (pass !== pass2) { setError("Passphrases don't match"); return; }
-      if (!apiKey.trim()) { setError("Paste your API key"); return; }
+      if (pass !== pass2) { setError(t("ai.passphrasesDontMatch")); return; }
+      if (!apiKey.trim()) { setError(t("ai.pasteKey")); return; }
       run(async () => { await createVault(pass); await setProviderKey(provider.id, apiKey); });
     };
     return (
       <form className="card form" onSubmit={submit} autoComplete="off">
-        <h3>🔑 Save your {provider.name} key</h3>
-        <p className="muted">
-          Your keys are locked with a passphrase you choose and stored only on this device. One passphrase protects the keys for every provider.
-          {provider.keyUrl && <> Get a key at <a href={provider.keyUrl} target="_blank" rel="noreferrer">{new URL(provider.keyUrl).host}</a>.</>}
-        </p>
-        <label htmlFor="new-key"><span>{provider.name} API key</span>
+        <h3>{t("ai.saveKeyTitle", { provider: name })}</h3>
+        <p className="muted">{t("ai.vaultHelp")}<KeyLink url={provider.keyUrl} label={t("ai.getKeyAt")} /></p>
+        <label htmlFor="new-key"><span>{t("ai.apiKeyLabel", { provider: name })}</span>
           <input id="new-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={provider.keyPlaceholder} required spellCheck={false} />
         </label>
-        <label htmlFor="new-pass"><span>New passphrase (min {MIN_PASSPHRASE} characters)</span>
+        <label htmlFor="new-pass"><span>{t("ai.newPassphrase", { min: MIN_PASSPHRASE })}</span>
           <input id="new-pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
         </label>
-        <label htmlFor="new-pass2"><span>Repeat passphrase</span>
+        <label htmlFor="new-pass2"><span>{t("ai.repeatPassphrase")}</span>
           <input id="new-pass2" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
         </label>
         {error && <p className="error">{error}</p>}
-        <div className="row"><button disabled={busy}>{busy ? "Encrypting…" : "Save securely"}</button></div>
+        <div className="row"><button disabled={busy}>{busy ? t("ai.encrypting") : t("ai.saveSecurely")}</button></div>
       </form>
     );
   }
 
   if (!vault.unlocked) {
-    const saved = Object.keys(vault.hints).map((id) => getProvider(id)?.name ?? id);
+    const saved = Object.keys(vault.hints).map((id) => { const p = getProvider(id); return p ? providerName(p) : id; });
     return (
       <form className="card form" onSubmit={(e) => { e.preventDefault(); run(() => unlock(pass)); }}>
-        <h3>🔒 Keys locked</h3>
-        <p className="muted">{saved.length ? `Saved keys: ${saved.join(", ")}.` : "No keys saved yet."} Enter your passphrase to unlock them for this session.</p>
-        <label htmlFor="unlock-pass"><span>Passphrase</span>
+        <h3>{t("ai.keysLocked")}</h3>
+        <p className="muted">{saved.length ? t("ai.savedKeys", { list: saved.join(", ") }) : t("ai.noKeysSaved")} {t("ai.unlockHelp")}</p>
+        <label htmlFor="unlock-pass"><span>{t("ai.passphrase")}</span>
           <input id="unlock-pass" type="password" value={pass} onChange={(e) => setPass(e.target.value)} required autoComplete="current-password" />
         </label>
         {error && <p className="error">{error}</p>}
         <div className="row">
-          <button disabled={busy}>{busy ? "Unlocking…" : "Unlock"}</button>
+          <button disabled={busy}>{busy ? t("ai.unlocking") : t("ai.unlock")}</button>
           {!confirmReset
-            ? <button type="button" className="ghost danger" disabled={busy} onClick={() => setConfirmReset(true)}>Forgot passphrase?</button>
-            : <button type="button" className="danger-solid" disabled={busy} onClick={() => run(resetVault)}>Delete all saved keys</button>}
+            ? <button type="button" className="ghost danger" disabled={busy} onClick={() => setConfirmReset(true)}>{t("ai.forgotPassphrase")}</button>
+            : <button type="button" className="danger-solid" disabled={busy} onClick={() => run(resetVault)}>{t("ai.deleteAllKeys")}</button>}
         </div>
-        {confirmReset && <p className="muted small">Without the passphrase the keys can't be recovered. Deleting them lets you start again; your farm records are not affected.</p>}
+        {confirmReset && <p className="muted small">{t("ai.resetHelp")}</p>}
       </form>
     );
   }
@@ -183,24 +194,24 @@ export function KeyVault() {
   return (
     <form className="card form" autoComplete="off" onSubmit={(e) => { e.preventDefault(); run(() => setProviderKey(provider.id, apiKey)); }}>
       <div className="row between">
-        <h3>🔓 Keys unlocked</h3>
-        <button type="button" className="ghost small" onClick={lock}>Lock</button>
+        <h3>{t("ai.keysUnlocked")}</h3>
+        <button type="button" className="ghost small" onClick={lock}>{t("ai.lock")}</button>
       </div>
-      <p className="muted small">Auto-locks after 15 minutes idle or when you close the app.</p>
+      <p className="muted small">{t("ai.autoLock")}</p>
       {hint ? (
         <div className="row between">
-          <span>{provider.name}: <code>…{hint}</code></span>
-          <button type="button" className="ghost danger small" disabled={busy} onClick={() => run(() => removeProviderKey(provider.id))}>Remove</button>
+          <span>{name}: <code>…{hint}</code></span>
+          <button type="button" className="ghost danger small" disabled={busy} onClick={() => run(() => removeProviderKey(provider.id))}>{t("ai.remove")}</button>
         </div>
       ) : (
-        <p>{provider.keyRequired ? `No ${provider.name} key yet.` : `${provider.name} doesn't need a key, but you can add one.`}
-          {provider.keyUrl && <> Get one at <a href={provider.keyUrl} target="_blank" rel="noreferrer">{new URL(provider.keyUrl).host}</a>.</>}</p>
+        <p>{provider.keyRequired ? t("ai.noProviderKey", { provider: name }) : t("ai.optionalKey", { provider: name })}
+          <KeyLink url={provider.keyUrl} label={t("ai.getOneAt")} /></p>
       )}
-      <label htmlFor="provider-key"><span>{hint ? "Replace" : "Add"} {provider.name} key</span>
+      <label htmlFor="provider-key"><span>{t(hint ? "ai.replaceKey" : "ai.addKey", { provider: name })}</span>
         <input id="provider-key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={provider.keyPlaceholder} spellCheck={false} />
       </label>
       {error && <p className="error">{error}</p>}
-      <div className="row"><button disabled={busy || !apiKey.trim()}>{busy ? "Saving…" : "Save key"}</button></div>
+      <div className="row"><button disabled={busy || !apiKey.trim()}>{busy ? t("ai.saving") : t("ai.saveKey")}</button></div>
     </form>
   );
 }

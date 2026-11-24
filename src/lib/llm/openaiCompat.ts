@@ -3,7 +3,8 @@
  * Groq, Mistral, Ollama, custom). Plain fetch with only standard headers
  * (Authorization, Content-Type): some providers' CORS rules reject extra SDK headers.
  */
-import { REFUSAL_TEXT, type StreamRequest } from "./context";
+import { refusalText, type StreamRequest } from "./context";
+import { t } from "../../i18n";
 
 function headers(apiKey?: string): HeadersInit {
   const h: Record<string, string> = { "Content-Type": "application/json" };
@@ -17,27 +18,28 @@ async function httpError(res: Response, providerName: string, hadKey: boolean): 
     const body = await res.json();
     detail = body?.error?.message ?? body?.message ?? (typeof body?.error === "string" ? body.error : "");
   } catch { /* non-JSON body */ }
+  const provider = providerName;
   const msg: Record<number, string> = {
-    401: hadKey ? `Your ${providerName} API key was rejected. Check it in Settings.` : `${providerName} needs an API key. Add one in Settings.`,
-    402: `Your ${providerName} account is out of credit.`,
-    403: `This ${providerName} key isn't allowed to use that model.`,
-    404: `${providerName} doesn't recognise that model name. Pick another in Settings.`,
-    429: "Rate limit reached. Please wait a moment and try again.",
+    401: hadKey ? t("errors.keyRejected", { provider }) : t("errors.needsKey", { provider }),
+    402: t("errors.noCredit", { provider }),
+    403: t("errors.noModelAccess", { provider }),
+    404: t("errors.unknownModel", { provider }),
+    429: t("errors.rateLimit"),
   };
-  return new Error(msg[res.status] ?? `${providerName} error (${res.status})${detail ? `: ${detail}` : ""}`);
+  return new Error(msg[res.status] ?? `${t("errors.providerError", { provider, status: res.status })}${detail ? `: ${detail}` : ""}`);
 }
 
 function networkError(err: unknown, providerName: string): Error {
-  if (err instanceof DOMException && err.name === "AbortError") return new Error("Stopped.");
+  if (err instanceof DOMException && err.name === "AbortError") return new Error(t("errors.stopped"));
   if (err instanceof TypeError) {
-    return new Error(`Can't reach ${providerName}. Check you're online and the address is right. Local and custom servers must allow requests from this app (CORS).`);
+    return new Error(t("errors.cantReach", { provider: providerName }));
   }
   return err instanceof Error ? err : new Error(String(err));
 }
 
 export async function streamOpenAICompatible(req: StreamRequest, providerName: string): Promise<string> {
-  if (!req.baseURL) throw new Error("Set the server address for this provider in Settings.");
-  if (!req.model) throw new Error("Choose a model for this provider in Settings.");
+  if (!req.baseURL) throw new Error(t("errors.setAddress"));
+  if (!req.model) throw new Error(t("errors.chooseModel"));
 
   let res: Response;
   try {
@@ -55,7 +57,7 @@ export async function streamOpenAICompatible(req: StreamRequest, providerName: s
     throw networkError(err, providerName);
   }
   if (!res.ok) throw await httpError(res, providerName, !!req.apiKey);
-  if (!res.body) throw new Error(`${providerName} returned an empty response.`);
+  if (!res.body) throw new Error(t("errors.emptyResponse", { provider: providerName }));
 
   let text = "";
   let finish: string | null = null;
@@ -74,7 +76,7 @@ export async function streamOpenAICompatible(req: StreamRequest, providerName: s
         if (!data || data === "[DONE]") continue;
         let chunk;
         try { chunk = JSON.parse(data); } catch { continue; }
-        if (chunk.error) throw new Error(`${providerName} error: ${chunk.error.message ?? JSON.stringify(chunk.error)}`);
+        if (chunk.error) throw new Error(`${t("errors.providerError", { provider: providerName, status: "stream" })}: ${chunk.error.message ?? JSON.stringify(chunk.error)}`);
         const choice = chunk.choices?.[0];
         const delta: unknown = choice?.delta?.content;
         if (typeof delta === "string" && delta) {
@@ -88,13 +90,13 @@ export async function streamOpenAICompatible(req: StreamRequest, providerName: s
     throw networkError(err, providerName);
   }
 
-  if (!text && finish === "content_filter") return REFUSAL_TEXT;
-  if (!text) throw new Error(`${providerName} returned no answer. Try again or pick another model.`);
+  if (!text && finish === "content_filter") return refusalText();
+  if (!text) throw new Error(t("errors.noAnswer", { provider: providerName }));
   return text;
 }
 
 export async function listOpenAICompatibleModels(baseURL: string, apiKey: string | undefined, providerName: string): Promise<string[]> {
-  if (!baseURL) throw new Error("Set the server address first.");
+  if (!baseURL) throw new Error(t("errors.setAddressFirst"));
   let res: Response;
   try {
     res = await fetch(`${baseURL}/models`, { headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {} });
