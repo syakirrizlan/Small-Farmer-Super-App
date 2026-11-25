@@ -181,3 +181,23 @@
 .md-table th { font-weight: 600; color: var(--label-2); font-size: 12.5px; text-transform: none; }
 .md-table th, .md-table td { padding: 7px 10px; white-space: nowrap; }
 .md-table tr + tr td, .md-table tbody tr:first-child td { border-top: 0.5px solid var(--separator); }
+
+/* ---------- Voice typing ---------- */
+.asst-mic {
+  position: relative; flex-shrink: 0; display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  border: 0; cursor: pointer; background: var(--fill); color: var(--label-2); transition: background-color 160ms, color 160ms, transform 120ms;
+}
+.asst-mic::before { content: ""; position: absolute; inset: -5px; } /* 46px hit target */
+.asst-mic .icon { width: 20px; height: 20px; }
+.asst-mic:active { transform: scale(.9); }
+.asst-mic[disabled] { opacity: .4; cursor: default; transform: none; }
+.asst-mic.on { background: var(--red); color: #fff; }
+.asst-mic.on::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent);
+  animation: asst-mic-pulse 1.4s ease-out infinite;
+}
+@keyframes asst-mic-pulse { to { box-shadow: 0 0 0 12px color-mix(in srgb, var(--red) 0%, transparent); } }
+.asst-listening { color: var(--red-text); }
+.asst-rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; animation: asst-blink 1s steps(2, start) infinite; }
+@keyframes asst-blink { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .asst-mic.on::after, .asst-rec-dot { animation: none; } }

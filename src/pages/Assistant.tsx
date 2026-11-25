@@ -9,6 +9,7 @@ import { useI18n, type TKey } from "../i18n";
 import { providerName } from "../i18n/labels";
 import { getModule } from "../db/modules";
 import MessageContent from "../components/MessageContent";
+import { useDictation } from "../lib/useDictation";
 
 type Tile = CSSProperties & { "--tile"?: string };
 
@@ -25,6 +26,8 @@ export default function Assistant() {
   const ai = useAiReadiness();
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [draft, setDraft] = useState("");
+  // Voice typing: spoken words go into the message box for review before sending.
+  const dict = useDictation(setDraft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [prevLang, setPrevLang] = useState(lang);
@@ -56,6 +59,7 @@ export default function Assistant() {
   const offlineBlocked = !online && ai?.provider.id !== "ollama";
 
   const send = async (text: string) => {
+    dict.stop();
     if (!text.trim() || busy || offlineBlocked) return;
     const history: ChatTurn[] = [...turns, { role: "user", content: text.trim() }];
     setTurns([...history, { role: "assistant", content: "" }]);
@@ -150,7 +154,7 @@ export default function Assistant() {
                       </li>
                     ))}
                   </ul>
-                  <p className="section-foot">{t("assistant.disclaimer")}</p>
+                  <p className="section-foot">{t("assistant.disclaimer")}{dict.supported && <> {t("assistant.voiceNote")}</>}</p>
                 </section>
               </div>
             )}
@@ -179,13 +183,24 @@ export default function Assistant() {
           <div className="asst-dock">
             {offlineBlocked && <p className="asst-note" role="status"><Icon name="alert" />{t("assistant.offline")}</p>}
             {error && <p className="error asst-error" role="alert"><Icon name="alert" />{error}</p>}
+            {dict.listening && <p className="asst-note asst-listening" role="status"><span className="asst-rec-dot" aria-hidden="true" />{t("assistant.listening")}</p>}
+            {dict.error && !dict.listening && <p className="error asst-error" role="alert"><Icon name="alert" />{t(dict.error)}</p>}
             <form className="composer asst-composer" onSubmit={submit}>
-              <textarea ref={inputRef} rows={1} value={draft} placeholder={t("assistant.placeholder")} aria-label={t("assistant.placeholder")}
+              <textarea ref={inputRef} rows={1} value={draft} readOnly={dict.listening}
+                placeholder={dict.listening ? t("assistant.listeningShort") : t("assistant.placeholder")} aria-label={t("assistant.placeholder")}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (canSend) send(draft); } }} />
               {/* Separate keyed nodes: if React reused one <button> for Stop and Send, the Stop
                   click's default action would run after it turned back into a submit button and
                   re-send the message. preventDefault cancels that activation as well. */}
+              {dict.supported && !busy && (
+                <button key="mic" type="button" className={`asst-mic${dict.listening ? " on" : ""}`}
+                  aria-pressed={dict.listening} aria-label={t(dict.listening ? "assistant.micStop" : "assistant.micStart")}
+                  title={t(dict.listening ? "assistant.micStop" : "assistant.micStart")} disabled={!online}
+                  onClick={() => { if (dict.listening) { dict.stop(); inputRef.current?.focus(); } else dict.start(draft); }}>
+                  <Icon name="mic" />
+                </button>
+              )}
               {busy
                 ? <button key="stop" type="button" className="asst-send asst-stop"
                     onClick={(e) => { e.preventDefault(); abort.current?.abort(); }}>

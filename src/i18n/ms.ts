@@ -130,6 +130,17 @@ const ms: Dict = {
   },
 
   assistant: {
+    micStart: "Sebut soalan anda",
+    listeningShort: "Sedang mendengar…",
+    micStop: "Berhenti mendengar",
+    listening: "Sedang mendengar… bercakap sekarang, kemudian tekan mikrofon untuk berhenti.",
+    micDenied: "Akses mikrofon disekat. Benarkan dalam tetapan laman pelayar, kemudian cuba lagi.",
+    noMic: "Tiada mikrofon ditemui.",
+    speechNetwork: "Taip suara memerlukan sambungan internet.",
+    noSpeech: "Suara tidak dapat ditangkap. Tekan mikrofon dan cuba lagi.",
+    speechLang: "Taip suara tidak tersedia untuk bahasa ini dalam pelayar anda.",
+    speechFailed: "Taip suara berhenti secara tiba-tiba. Sila cuba lagi.",
+    voiceNote: "Taip suara menggunakan perkhidmatan pertuturan pelayar anda (Google dalam Chrome, Microsoft dalam Edge) untuk menukar suara kepada teks.",
     chartFromRecords: "Daripada rekod anda",
     chartEstimate: "Anggaran AI",
     chartPreparing: "Menyediakan carta…",
