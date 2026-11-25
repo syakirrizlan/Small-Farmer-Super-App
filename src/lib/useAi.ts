@@ -26,10 +26,9 @@ export function useAiReadiness() {
   if (!settings || !vault) return null;
   const { provider, model, baseURL } = resolve(settings);
   const hasKey = !!vault.hints[provider.id];
-  let blocker: "no-vault" | "locked" | "no-key" | "no-url" | "no-model" | null = null;
+  let blocker: "locked" | "no-key" | "no-url" | "no-model" | null = null;
   if (provider.id === "custom" && !baseURL) blocker = "no-url";
   else if (!model) blocker = "no-model";
-  else if (provider.keyRequired && !vault.exists) blocker = "no-vault";
   else if (provider.keyRequired && !hasKey) blocker = vault.unlocked ? "no-key" : "locked";
   else if ((provider.keyRequired || hasKey) && !vault.unlocked) blocker = "locked";
   return { provider, model, baseURL, vault, blocker, ready: blocker === null };

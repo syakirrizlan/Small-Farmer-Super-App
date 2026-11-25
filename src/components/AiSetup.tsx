@@ -3,7 +3,7 @@ import { PROVIDERS, getProvider, type ProviderDef } from "../lib/providers";
 import { resolve, setProviderModel, updateAiSettings, type AiSettings } from "../lib/settings";
 import { listModels } from "../lib/ai";
 import {
-  MIN_PASSPHRASE, createVault, lock, removeProviderKey, resetVault, setProviderKey, unlock, type VaultStatus,
+  MIN_PASSPHRASE, disablePassphrase, enablePassphrase, lock, removeProviderKey, resetVault, setProviderKey, unlock, type VaultStatus,
 } from "../lib/vault";
 import { useAiSettings, useVaultStatus } from "../lib/useAi";
 import { t, useI18n } from "../i18n";
@@ -163,22 +163,20 @@ function KeyLink({ url, label }: { url?: string; label: string }) {
   return <> {label} <a href={url} target="_blank" rel="noreferrer">{new URL(url).host}</a>.</>;
 }
 
-/** Create / unlock the vault, and add or remove the key for the active provider. */
+/** Add, replace or remove the key for the active provider (and unlock, if a passphrase lock is on). */
 export function KeyVault() {
   const { t, lang } = useI18n();
   const settings = useAiSettings();
   const vault = useVaultStatus();
   const [apiKey, setApiKey] = useState("");
   const [pass, setPass] = useState("");
-  const [pass2, setPass2] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [optIn, setOptIn] = useState(false);
   // Clear a typed key / error when the provider changes so it can't be saved under the wrong one.
   const pid = settings?.activeProvider;
   const [prevPid, setPrevPid] = useState(pid);
-  if (pid !== prevPid) { setPrevPid(pid); setApiKey(""); setError(""); setConfirmReset(false); setOptIn(false); }
+  if (pid !== prevPid) { setPrevPid(pid); setApiKey(""); setError(""); setConfirmReset(false); }
   // Messages are translated when shown, so drop them when the language changes.
   const [prevLang, setPrevLang] = useState(lang);
   if (lang !== prevLang) { setPrevLang(lang); setError(""); }
@@ -188,58 +186,12 @@ export function KeyVault() {
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); setError("");
-    try { await fn(); setApiKey(""); setPass(""); setPass2(""); setConfirmReset(false); }
+    try { await fn(); setApiKey(""); setPass(""); setConfirmReset(false); }
     catch (e) { setError(errText(e)); }
     finally { setBusy(false); }
   };
 
-  if (!vault.exists) {
-    if (!provider.keyRequired && !optIn) {
-      return (
-        <div className="set-vault">
-          <ul className="group">
-            <StatusCell icon="checkmark" color="var(--green)" title={t("ai.worksWithoutKey", { provider: name })} />
-            <li>
-              <button type="button" className="cell cell-link set-action" onClick={() => setOptIn(true)}>
-                <span className="cell-body"><span className="cell-title">{t("ai.serverNeedsKey")}</span></span>
-                <Icon name="chevron" className="chev" />
-              </button>
-            </li>
-          </ul>
-        </div>
-      );
-    }
-    const submit = (e: FormEvent) => {
-      e.preventDefault();
-      if (pass !== pass2) { setError(t("ai.passphrasesDontMatch")); return; }
-      if (!apiKey.trim()) { setError(t("ai.pasteKey")); return; }
-      run(async () => { await createVault(pass); await setProviderKey(provider.id, apiKey); });
-    };
-    return (
-      <form className="set-vault" onSubmit={submit} autoComplete="off">
-        <div className="group">
-          <ul className="set-flat">
-            <StatusCell icon="key" color="var(--orange)" title={<strong className="set-strong">{t("ai.saveKeyTitle", { provider: name })}</strong>} />
-          </ul>
-          <label className="field" htmlFor="new-key"><span className="field-label">{t("ai.apiKeyLabel", { provider: name })}</span>
-            <input id="new-key" className="field-input" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} required spellCheck={false} />
-          </label>
-          <label className="field" htmlFor="new-pass"><span className="field-label">{t("ai.newPassphrase", { min: MIN_PASSPHRASE })}</span>
-            <input id="new-pass" className="field-input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
-          </label>
-          <label className="field" htmlFor="new-pass2"><span className="field-label">{t("ai.repeatPassphrase")}</span>
-            <input id="new-pass2" className="field-input" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
-          </label>
-        </div>
-        <p className="section-foot">{t("ai.vaultHelp")}<KeyLink url={provider.keyUrl} label={t("ai.getKeyAt")} /></p>
-        {error && <p className="section-foot set-error" role="alert">{error}</p>}
-        <button className="btn btn-block set-primary" disabled={busy}>
-          <Icon name="lock" size={20} aria-hidden="true" />{busy ? t("ai.encrypting") : t("ai.saveSecurely")}
-        </button>
-      </form>
-    );
-  }
-
+  // Passphrase lock is on and the keys are locked: ask for the passphrase.
   if (!vault.unlocked) {
     const saved = Object.keys(vault.hints).map((id) => { const p = getProvider(id); return p ? providerName(p) : id; });
     return (
@@ -274,29 +226,97 @@ export function KeyVault() {
   }
 
   const hint = vault.hints[provider.id];
+  const locked = vault.mode === "passphrase";
   return (
     <form className="set-vault" autoComplete="off" onSubmit={(e) => { e.preventDefault(); run(() => setProviderKey(provider.id, apiKey)); }}>
       <ul className="group">
-        <StatusCell icon="unlock" color="var(--green)" title={<strong className="set-strong">{t("ai.keysUnlocked")}</strong>} sub={t("ai.autoLock")}>
-          <button type="button" className="btn-plain set-trailing" onClick={lock}>{t("ai.lock")}</button>
-        </StatusCell>
-        {hint && (
+        {locked && (
+          <StatusCell icon="unlock" color="var(--green)" title={<strong className="set-strong">{t("ai.keysUnlocked")}</strong>} sub={t("ai.autoLock")}>
+            <button type="button" className="btn-plain set-trailing" onClick={lock}>{t("ai.lock")}</button>
+          </StatusCell>
+        )}
+        {hint ? (
           <StatusCell icon="key" color="var(--orange)" title={name} sub={<span className="set-mono">…{hint}</span>}>
             <button type="button" className="btn-plain btn-destructive set-trailing" disabled={busy} onClick={() => run(() => removeProviderKey(provider.id))}>{t("ai.remove")}</button>
           </StatusCell>
+        ) : (
+          <StatusCell icon="key" color="var(--gray)" title={name}
+            sub={provider.keyRequired ? t("ai.noProviderKey", { provider: name }) : t("ai.optionalKey", { provider: name })} />
         )}
       </ul>
-      {!hint && (
-        <p className="section-foot">{provider.keyRequired ? t("ai.noProviderKey", { provider: name }) : t("ai.optionalKey", { provider: name })}
-          <KeyLink url={provider.keyUrl} label={t("ai.getOneAt")} /></p>
-      )}
       <div className="group set-gap">
         <label className="field" htmlFor="provider-key"><span className="field-label">{t(hint ? "ai.replaceKey" : "ai.addKey", { provider: name })}</span>
           <input id="provider-key" className="field-input" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={providerKeyPlaceholder(provider)} spellCheck={false} />
         </label>
       </div>
+      <p className="section-foot">
+        {locked ? t("ai.keyStoredLocked") : t("ai.keyStoredDevice")}
+        <KeyLink url={provider.keyUrl} label={t("ai.getOneAt")} />
+      </p>
       {error && <p className="section-foot set-error" role="alert">{error}</p>}
       <button className="btn btn-block set-primary" disabled={busy || !apiKey.trim()}>{busy ? t("ai.saving") : t("ai.saveKey")}</button>
     </form>
+  );
+}
+
+/** Optional passphrase lock (Settings only). Hidden while the keys are locked — unlock first. */
+export function PassphraseLock() {
+  const { t, lang } = useI18n();
+  const vault = useVaultStatus();
+  const [open, setOpen] = useState(false);
+  const [pass, setPass] = useState("");
+  const [pass2, setPass2] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [prevLang, setPrevLang] = useState(lang);
+  if (lang !== prevLang) { setPrevLang(lang); setError(""); }
+  if (!vault || !vault.unlocked || !vault.exists) return null;
+  const on = vault.mode === "passphrase";
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true); setError("");
+    try { await fn(); setPass(""); setPass2(""); setOpen(false); }
+    catch (e) { setError(errText(e)); }
+    finally { setBusy(false); }
+  };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (pass !== pass2) { setError(t("ai.passphrasesDontMatch")); return; }
+    run(() => enablePassphrase(pass));
+  };
+
+  return (
+    <section className="section">
+    <h2 className="section-title">{t("settings.security")}</h2>
+    <form className="set-vault" onSubmit={submit} autoComplete="off">
+      <ul className="group">
+        <StatusCell icon="lock" color={on ? "var(--blue)" : "var(--gray)"} title={t("ai.passphraseLock")}
+          sub={on ? t("ai.passphraseLockOn") : t("ai.passphraseLockOff")}>
+          {on
+            ? <button type="button" className="btn-plain set-trailing" disabled={busy} onClick={() => run(disablePassphrase)}>{t("ai.turnOff")}</button>
+            : !open && <button type="button" className="btn-plain set-trailing" onClick={() => setOpen(true)}>{t("ai.turnOn")}</button>}
+        </StatusCell>
+      </ul>
+      {!on && open && (
+        <>
+          <div className="group set-gap">
+            <label className="field" htmlFor="new-pass"><span className="field-label">{t("ai.newPassphrase", { min: MIN_PASSPHRASE })}</span>
+              <input id="new-pass" className="field-input" type="password" value={pass} onChange={(e) => setPass(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
+            </label>
+            <label className="field" htmlFor="new-pass2"><span className="field-label">{t("ai.repeatPassphrase")}</span>
+              <input id="new-pass2" className="field-input" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} minLength={MIN_PASSPHRASE} required autoComplete="new-password" />
+            </label>
+          </div>
+          {error && <p className="section-foot set-error" role="alert">{error}</p>}
+          <div className="btn-row">
+            <button type="button" className="btn-gray" onClick={() => { setOpen(false); setError(""); }}>{t("common.cancel")}</button>
+            <button className="btn" disabled={busy}><Icon name="lock" size={20} aria-hidden="true" />{busy ? t("ai.encrypting") : t("ai.enableLock")}</button>
+          </div>
+        </>
+      )}
+      {!open && error && <p className="section-foot set-error" role="alert">{error}</p>}
+      <p className="section-foot">{t("ai.passphraseLockHelp")}</p>
+    </form>
+    </section>
   );
 }

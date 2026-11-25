@@ -29,8 +29,7 @@
 /* Darkened so the white initial passes 4.5:1 in both themes. */
 .tile.set-initial { font: 700 15px/1 var(--font-rounded); letter-spacing: 0; background: color-mix(in srgb, var(--tile) 70%, #000); }
 /* "Other (OpenAI-compatible)": opaque neutral grey (about 4.7:1 for the white glyph in light, 5:1 in dark). */
-.tile.set-custom-tile { background: color-mix(in srgb, var(--label) 55%, var(--bg-elevated)); }
-@media (prefers-color-scheme: dark) { .tile.set-custom-tile { background: color-mix(in srgb, var(--label) 35%, var(--bg-elevated)); } }
+.tile.set-custom-tile { background: var(--gray); }
 .set-providers .cell-title { font-weight: 400; }
 .set-providers .provider.active .cell-title { font-weight: 600; }
 .set-key-status { display: inline-flex; align-items: center; gap: 5px; }
