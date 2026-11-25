@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/icon.svg", "icons/icon-maskable.svg"],
+      includeAssets: ["icons/*.svg", "icons/*.png"],
       manifest: {
         name: "Small Farmer Super App",
         short_name: "FarmApp",
@@ -15,10 +15,15 @@ export default defineConfig({
         theme_color: "#f2f2f7",
         background_color: "#f2f2f7",
         display: "standalone",
+        id: "/",
         start_url: "/",
         icons: [
+          // PNGs first: Windows/Android build shortcut & taskbar icons from these. New file
+          // names (v2) so no cached copy of the old leaf icon can be reused.
+          { src: "icons/icon-v2-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "icons/icon-v2-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "icons/icon-v2-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
           { src: "icons/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-          { src: "icons/icon-maskable.svg", sizes: "any", type: "image/svg+xml", purpose: "maskable" },
         ],
       },
       workbox: {
