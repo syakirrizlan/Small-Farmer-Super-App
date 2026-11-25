@@ -3,7 +3,7 @@
  * Provider code is loaded on demand so unused SDKs never download.
  */
 import { getAiSettings, resolve } from "./settings";
-import { getProviderKey, peekProviderKey } from "./vault";
+import { getProviderKey, peekProviderKey, vaultReady } from "./vault";
 import { SYSTEM, farmSnapshot, languageInstruction, type ChatTurn } from "./llm/context";
 import { providerName } from "../i18n/labels";
 import type { ProviderDef } from "./providers";
@@ -16,6 +16,7 @@ function keyFor(provider: ProviderDef): string | undefined {
 
 export async function streamChat(history: ChatTurn[], onText: (delta: string) => void, signal?: AbortSignal): Promise<string> {
   const { provider, model, baseURL } = resolve(await getAiSettings());
+  await vaultReady();
   const apiKey = keyFor(provider);
   const system = `${SYSTEM}\n${languageInstruction()}\n\n${await farmSnapshot()}`;
   const req = { model, baseURL, apiKey, system, history, onText, signal };
@@ -30,6 +31,7 @@ export async function streamChat(history: ChatTurn[], onText: (delta: string) =>
 
 /** Ask the provider which models this key can use. */
 export async function listModels(provider: ProviderDef, baseURL: string): Promise<string[]> {
+  await vaultReady();
   const apiKey = keyFor(provider);
   if (provider.kind === "anthropic") {
     const { listAnthropicModels } = await import("./llm/anthropic");

@@ -22,6 +22,7 @@
   --red-text: #c4261d;      /* 5.8:1 on white, >=4.6:1 on a 15% red wash */
   --orange-text: #9a5200;   /* >=4.6:1 on a 16% orange wash over --bg */
 
+  --gray: #8a8a8e;          /* neutral icon tile (off / empty states) */
   --red: #e5342a; --orange: #f08a00; --yellow: #d9a400; --green: #28a745;
   --blue: #0a6cff; --indigo: #5150d4; --purple: #a24fd6; --brown: #9a7b56; --teal: #2aa3b8;
 
@@ -64,6 +65,7 @@
     --red-text: #ff6961;
     --orange-text: color-mix(in srgb, var(--orange) 78%, var(--label));
 
+    --gray: #636366;
     --red: #ff453a; --orange: #ff9f0a; --yellow: #ffd60a; --green: #30d158;
     --blue: #0a84ff; --indigo: #5e5ce6; --purple: #bf5af2; --brown: #ac8e68; --teal: #40c8e0;
     --shadow-sheet: 0 10px 40px rgba(0, 0, 0, 0.5);

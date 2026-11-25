@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from "react";
 import Icon from "../components/Icon";
 import "../styles/settings.css";
 import { InvalidBackupError, exportAll, importAll } from "../db/db";
-import { KeyVault, ProviderPicker } from "../components/AiSetup";
+import { KeyVault, PassphraseLock, ProviderPicker } from "../components/AiSetup";
 import { InstallCard } from "../components/InstallButton";
 import { LANGUAGES, useI18n, type TKey } from "../i18n";
 
@@ -67,6 +67,8 @@ export default function Settings() {
         <h2 className="section-title">{t("settings.apiKeys")}</h2>
         <KeyVault />
       </section>
+
+      <PassphraseLock />
 
       <section className="section">
         <h2 className="section-title">{t("settings.yourData")}</h2>
