@@ -29,7 +29,12 @@ interface Session {
   aes: CryptoKey;
   salt?: ArrayBuffer; // passphrase mode only
   keys: Record<string, string>;
+  /** updatedAt of the stored row this session was read from / last wrote (0 = no row yet). */
+  rev: number;
 }
+
+/** The stored vault changed since this session read it (another window, or a reset). */
+class StaleVault extends Error {}
 
 let session: Session | null = null;
 /** Bumped on every lock/reset so a slow unlock that finishes afterwards is discarded. */
@@ -74,20 +79,54 @@ async function decryptWith(aes: CryptoKey, iv: ArrayBuffer, ciphertext: ArrayBuf
 const hintsOf = (keys: Record<string, string>) =>
   Object.fromEntries(Object.entries(keys).map(([p, k]) => [p, k.slice(-4)]));
 
-/** Encrypt the in-memory key map with a fresh IV and store it (mode decides what else is stored). */
-async function persist(s: Session) {
+/**
+ * Encrypt the in-memory key map with a fresh IV and store it — but only if the stored row is
+ * still the one this session expects (`expectedRev`), so a stale window can never overwrite
+ * a newer vault (e.g. one where the passphrase lock was just turned on elsewhere).
+ */
+async function persist(s: Session, expectedRev = s.rev) {
   const iv = crypto.getRandomValues(new Uint8Array(12)).buffer;
+  // Encrypt before the transaction: WebCrypto must not be awaited inside an IndexedDB transaction.
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv }, s.aes, new TextEncoder().encode(JSON.stringify(s.keys)),
   );
-  const existing = await db.secrets.get(VAULT_ID);
-  const row: SecretRow = {
-    id: VAULT_ID, mode: s.mode, iv, ciphertext, hints: hintsOf(s.keys),
-    createdAt: existing?.createdAt ?? Date.now(), updatedAt: Date.now(),
+  const now = Math.max(Date.now(), expectedRev + 1);
+  await db.transaction("rw", db.secrets, async () => {
+    const cur = await db.secrets.get(VAULT_ID);
+    if ((cur?.updatedAt ?? 0) !== expectedRev) throw new StaleVault();
+    const row: SecretRow = {
+      id: VAULT_ID, mode: s.mode, iv, ciphertext, hints: hintsOf(s.keys),
+      createdAt: cur?.createdAt ?? now, updatedAt: now,
+    };
+    if (s.mode === "device") row.deviceKey = s.aes;
+    else row.salt = s.salt;
+    await db.secrets.put(row);
+  });
+  s.rev = now;
+}
+
+/** Tell other open windows/tabs that the vault changed. */
+const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("sf-vault") : null;
+const broadcast = () => { try { channel?.postMessage("changed"); } catch { /* closed */ } };
+
+/** Run vault writes one at a time; if the vault changed underneath us, reload it and ask to retry. */
+let writeChain: Promise<unknown> = Promise.resolve();
+function write<T>(fn: () => Promise<T>): Promise<T> {
+  const run = async () => {
+    try {
+      const out = await fn();
+      broadcast();
+      notify();
+      return out;
+    } catch (e) {
+      if (!(e instanceof StaleVault)) throw e;
+      await refreshFromStore();
+      throw new Error(t("errors.vaultChanged"));
+    }
   };
-  if (s.mode === "device") row.deviceKey = s.aes;
-  else row.salt = s.salt;
-  await db.secrets.put(row);
+  const r = writeChain.then(run, run);
+  writeChain = r.catch(() => undefined);
+  return r;
 }
 
 function armIdleLock() {
@@ -105,24 +144,56 @@ function startAutoUnlock() {
     if (!row || row.mode !== "device" || !row.deviceKey || session) return;
     const text = await decryptWith(row.deviceKey, row.iv, row.ciphertext, t("errors.vaultReset"));
     if (epoch !== my || session) return;
-    session = { mode: "device", aes: row.deviceKey, keys: JSON.parse(text) };
+    session = { mode: "device", aes: row.deviceKey, keys: JSON.parse(text), rev: row.updatedAt ?? 0 };
     notify();
-  })().catch(() => { /* unreadable device vault: treated as locked/empty */ });
+  })().catch(() => { /* unreadable device vault: reported by vaultStatus().unreadable */ });
   return autoUnlock;
 }
 if (typeof window !== "undefined") startAutoUnlock();
 
-/** Wait until a device vault has opened (call before reading keys). */
-export const vaultReady = () => autoUnlock;
+/**
+ * Wait until a device vault has opened (call before reading keys). Retries when there is no
+ * session yet, e.g. the first key was saved in another window after this one loaded.
+ */
+export function vaultReady(): Promise<void> {
+  return session ? autoUnlock : startAutoUnlock();
+}
+
+/** Re-read the stored vault after a change elsewhere: keep a passphrase session if still valid. */
+async function refreshFromStore() {
+  const keep = session;
+  epoch++;
+  session = null;
+  clearTimeout(idleTimer);
+  const row = await db.secrets.get(VAULT_ID);
+  if (row && row.mode !== "device" && keep?.mode === "passphrase" && row.salt && keep.salt && sameBytes(row.salt, keep.salt)) {
+    // Same passphrase-derived key: we can read the new contents without asking again.
+    try {
+      const text = await decryptWith(keep.aes, row.iv, row.ciphertext, "");
+      session = { ...keep, keys: JSON.parse(text), rev: row.updatedAt ?? 0 };
+      armIdleLock();
+    } catch { /* stays locked */ }
+  }
+  if (!session) await startAutoUnlock();
+  notify();
+}
+
+function sameBytes(a: ArrayBuffer, b: ArrayBuffer) {
+  if (a.byteLength !== b.byteLength) return false;
+  const x = new Uint8Array(a), y = new Uint8Array(b);
+  return x.every((v, i) => v === y[i]);
+}
+
+if (channel) channel.onmessage = () => { void refreshFromStore(); };
 
 /** Session for writing keys: opens (or creates) a device vault when needed. */
 async function writableSession(): Promise<Session> {
-  await autoUnlock;
+  await vaultReady();
   if (session) { armIdleLock(); return session; }
   const row = await db.secrets.get(VAULT_ID);
   if (row || (await db.secrets.get(LEGACY_ID))) throw new Error(t("errors.vaultLocked"));
   // First key ever: create a device vault — no passphrase needed.
-  session = { mode: "device", aes: await newDeviceKey(), keys: {} };
+  session = { mode: "device", aes: await newDeviceKey(), keys: {}, rev: 0 };
   return session;
 }
 
@@ -130,11 +201,15 @@ export async function unlock(passphrase: string) {
   const my = epoch;
   const row = await db.secrets.get(VAULT_ID);
   if (row) {
-    if (row.mode === "device" || !row.salt) { await startAutoUnlock(); return; }
+    if (row.mode === "device" || !row.salt) {
+      await startAutoUnlock();
+      if (!session) throw new Error(t("errors.keysUnreadable"));
+      return;
+    }
     const aes = await deriveKey(passphrase, row.salt);
     const text = await decryptWith(aes, row.iv, row.ciphertext, t("errors.wrongPassphrase"));
     checkEpoch(my);
-    session = { mode: "passphrase", aes, salt: row.salt, keys: JSON.parse(text) };
+    session = { mode: "passphrase", aes, salt: row.salt, keys: JSON.parse(text), rev: row.updatedAt ?? 0 };
   } else {
     // Migrate the v0.1 single-key vault (Anthropic only) into the multi-provider vault.
     const legacy = await db.secrets.get(LEGACY_ID);
@@ -142,7 +217,7 @@ export async function unlock(passphrase: string) {
     const aes = await deriveKey(passphrase, legacy.salt);
     const text = await decryptWith(aes, legacy.iv, legacy.ciphertext, t("errors.wrongPassphrase"));
     checkEpoch(my);
-    const next: Session = { mode: "passphrase", aes, salt: legacy.salt, keys: { anthropic: text } };
+    const next: Session = { mode: "passphrase", aes, salt: legacy.salt, keys: { anthropic: text }, rev: 0 };
     await persist(next);
     checkEpoch(my);
     await db.secrets.delete(LEGACY_ID);
@@ -162,42 +237,49 @@ export function lock() {
 }
 
 /** Turn on the optional passphrase lock: re-encrypt all keys with a passphrase-derived key. */
-export async function enablePassphrase(passphrase: string) {
-  if (passphrase.length < MIN_PASSPHRASE) throw new Error(t("errors.passphraseTooShort", { min: MIN_PASSPHRASE }));
-  const s = await writableSession();
-  const salt = crypto.getRandomValues(new Uint8Array(16)).buffer;
-  const next: Session = { mode: "passphrase", aes: await deriveKey(passphrase, salt), salt, keys: s.keys };
-  await persist(next);
-  session = next;
-  armIdleLock();
-  notify();
+export function enablePassphrase(passphrase: string) {
+  if (passphrase.length < MIN_PASSPHRASE) return Promise.reject(new Error(t("errors.passphraseTooShort", { min: MIN_PASSPHRASE })));
+  return write(async () => {
+    const s = await writableSession();
+    const salt = crypto.getRandomValues(new Uint8Array(16)).buffer;
+    const next: Session = { mode: "passphrase", aes: await deriveKey(passphrase, salt), salt, keys: s.keys, rev: s.rev };
+    await persist(next, s.rev);
+    session = next;
+    armIdleLock();
+  });
 }
 
 /** Turn off the passphrase lock (vault must be unlocked): keys move back to the device key. */
-export async function disablePassphrase() {
-  const s = await writableSession();
-  const next: Session = { mode: "device", aes: await newDeviceKey(), keys: s.keys };
-  await persist(next);
-  session = next;
-  clearTimeout(idleTimer);
-  notify();
+export function disablePassphrase() {
+  return write(async () => {
+    const s = await writableSession();
+    const next: Session = { mode: "device", aes: await newDeviceKey(), keys: s.keys, rev: s.rev };
+    await persist(next, s.rev);
+    session = next;
+    clearTimeout(idleTimer);
+  });
 }
 
-export async function setProviderKey(providerId: string, apiKey: string) {
+export function setProviderKey(providerId: string, apiKey: string) {
   const trimmed = apiKey.trim();
-  if (!trimmed) throw new Error(t("errors.emptyKey"));
-  const s = await writableSession();
-  s.keys = { ...s.keys, [providerId]: trimmed };
-  await persist(s);
-  notify();
+  if (!trimmed) return Promise.reject(new Error(t("errors.emptyKey")));
+  return write(async () => {
+    const s = await writableSession();
+    const next = { ...s.keys, [providerId]: trimmed };
+    const draft: Session = { ...s, keys: next };
+    await persist(draft, s.rev);
+    s.keys = draft.keys; s.rev = draft.rev;
+  });
 }
 
-export async function removeProviderKey(providerId: string) {
-  const s = await writableSession();
-  const { [providerId]: _removed, ...rest } = s.keys;
-  s.keys = rest;
-  await persist(s);
-  notify();
+export function removeProviderKey(providerId: string) {
+  return write(async () => {
+    const s = await writableSession();
+    const { [providerId]: _removed, ...rest } = s.keys;
+    const draft: Session = { ...s, keys: rest };
+    await persist(draft, s.rev);
+    s.keys = draft.keys; s.rev = draft.rev;
+  });
 }
 
 /** Delete the vault and every saved key from this device. */
@@ -206,6 +288,7 @@ export async function resetVault() {
   session = null;
   clearTimeout(idleTimer);
   await db.secrets.bulkDelete([VAULT_ID, LEGACY_ID]);
+  broadcast();
   notify();
 }
 
@@ -213,19 +296,22 @@ export interface VaultStatus {
   exists: boolean;
   unlocked: boolean;
   mode: VaultMode;
+  /** A device vault exists but can't be decrypted here (e.g. copied/restored profile). */
+  unreadable: boolean;
   /** providerId → last 4 chars, readable while locked. */
   hints: Record<string, string>;
 }
 
 export async function vaultStatus(): Promise<VaultStatus> {
-  await autoUnlock;
+  await vaultReady();
   const row = await db.secrets.get(VAULT_ID);
   const legacy = row ? undefined : await db.secrets.get(LEGACY_ID);
   const hints = row?.hints ?? (legacy?.hint ? { anthropic: legacy.hint } : {});
   const mode: VaultMode = row ? (row.mode === "device" ? "device" : "passphrase") : legacy ? "passphrase" : "device";
   // A device vault is always usable; "unlocked" is only meaningful for a passphrase vault.
   const unlocked = session !== null || !(row || legacy);
-  return { exists: !!(row || legacy), unlocked, mode, hints };
+  const unreadable = mode === "device" && !!row && session === null;
+  return { exists: !!(row || legacy), unlocked, mode, unreadable, hints };
 }
 
 /** The in-memory key for a provider. Throws if locked or missing. Call vaultReady() first. */

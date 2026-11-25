@@ -191,6 +191,22 @@ export function KeyVault() {
     finally { setBusy(false); }
   };
 
+  // A device vault that can't be decrypted here: offer a clean reset (no passphrase was ever set).
+  if (vault.unreadable) {
+    return (
+      <div className="set-vault">
+        <ul className="group">
+          <StatusCell icon="alert" color="var(--orange)" title={<strong className="set-strong">{t("ai.keysUnreadableTitle")}</strong>} />
+        </ul>
+        <p className="section-foot">{t("ai.keysUnreadableHelp")}</p>
+        {error && <p className="section-foot set-error" role="alert">{error}</p>}
+        <button type="button" className="btn btn-danger btn-block" disabled={busy} onClick={() => run(resetVault)}>
+          <Icon name="trash" size={20} aria-hidden="true" />{t("ai.deleteAllKeys")}
+        </button>
+      </div>
+    );
+  }
+
   // Passphrase lock is on and the keys are locked: ask for the passphrase.
   if (!vault.unlocked) {
     const saved = Object.keys(vault.hints).map((id) => { const p = getProvider(id); return p ? providerName(p) : id; });

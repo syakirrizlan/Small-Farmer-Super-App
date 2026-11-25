@@ -56,15 +56,21 @@ For Ollama, start it with `OLLAMA_ORIGINS` set to the app's address so the brows
 
 ## How the API keys are protected
 
-1. The farmer picks **one passphrase** that protects the keys for every provider.
-2. A key is derived from the passphrase (PBKDF2-SHA256, 600k iterations, random salt) and used to encrypt all API keys together with **AES-GCM 256**.
-3. Only the ciphertext + salt + IV (and the last 4 characters of each key, for display) are stored in IndexedDB. The passphrase is never stored.
-4. Unlocking decrypts the keys **into memory only**; they auto-lock after 15 min idle or when the tab closes.
-5. A strict Content-Security-Policy blocks inline and third-party scripts, so injected code can't run to read keys. Network calls are allowed to any https server (so any AI provider works) and to http servers on this computer.
-6. Requests go **directly from the device to the chosen provider** — there is no backend that sees the keys. Backups never include keys.
-7. Forgot the passphrase? The keys can't be recovered; the farmer can delete them and start again. Farm records are not affected.
+**By default (no passphrase):** the farmer pastes a key once and the assistant just works.
+1. All provider keys are encrypted together with **AES-GCM 256** using a random key the browser generates as **non-extractable** and keeps in IndexedDB.
+2. Only the ciphertext, IV and the last 4 characters of each key (for display) are stored. Keys are never shown in the app and never included in backups.
+3. Honest limit: this does **not** protect against someone using the same device or browser profile. They can use the assistant, and a technical person with the profile could recover the keys.
 
-Honest limits: while unlocked, code running on the page could read the keys, so keep dependencies minimal and the CSP strict. The farm snapshot and questions go to whichever provider is selected, so the farmer should check that provider's data policy. A future backend proxy option could remove keys from the device entirely.
+**Optional passphrase lock (Settings → Security)** for shared devices:
+1. Keys are re-encrypted with a key derived from the passphrase (PBKDF2-SHA256, 600k iterations, random salt). The passphrase itself is never stored.
+2. Keys are decrypted into memory only after unlocking, and lock again after 15 min idle or when the app closes.
+3. The lock can be turned off again after unlocking. A forgotten passphrase can't be recovered: the farmer deletes the keys and adds them again. Farm records are not affected.
+
+In both modes:
+- Requests go **directly from the device to the chosen provider**; there is no backend that sees the keys.
+- A strict Content-Security-Policy blocks inline and third-party scripts, so injected code can't run to read keys. Network calls are allowed to any https server (so any AI provider works) and to http servers on this computer.
+- Saves are checked against the stored vault, so a second open window can't overwrite newer keys or silently turn the lock off; other windows refresh automatically.
+- The farm snapshot and questions go to whichever provider is selected, so the farmer should check that provider's data policy.
 
 ## Project layout
 
