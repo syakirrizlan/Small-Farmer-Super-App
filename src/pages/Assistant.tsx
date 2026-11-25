@@ -162,7 +162,7 @@ export default function Assistant() {
                   <div className={`bubble ${turn.role}${typing ? " typing" : ""}`}>
                     {typing
                       ? <><span className="asst-dots" aria-hidden="true"><i /><i /><i /></span><span className="sr-only">{t("assistant.thinking")}</span></>
-                      : turn.role === "assistant" ? <MessageContent content={turn.content} /> : turn.content}
+                      : turn.role === "assistant" ? <MessageContent content={turn.content} streaming={busy && i === turns.length - 1} /> : turn.content}
                   </div>
                 </div>
               );

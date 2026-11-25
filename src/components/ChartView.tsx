@@ -27,9 +27,11 @@ function ChartCard({ spec }: { spec: ChartSpec }) {
     [JSON.stringify(spec), lang],
   );
   const data: DataPoint[] | undefined = records ? result?.points : spec.data;
-  const unit = (records ? result?.unit : undefined) ?? spec.unit;
+  const unit = records ? result?.unit ?? spec.unit : spec.unit;
   const fmt = (v: number) => (unit === "RM" ? formatMoney(v) : `${formatNumber(v)}${unit ? ` ${unit}` : ""}`);
-  const empty = data && (data.length === 0 || data.every((p) => p.value === 0));
+  const allZero = !!data && data.every((p) => p.value === 0);
+  const empty = records && !!data && (data.length === 0 || allZero);
+  const aiNothingToDraw = !records && allZero && (spec.type === "donut" || spec.type === "progress");
   const summary = data ? `${spec.title}: ${data.map((p) => `${p.label} ${fmt(p.value)}`).join(", ")}` : spec.title;
 
   return (
@@ -42,6 +44,7 @@ function ChartCard({ spec }: { spec: ChartSpec }) {
       </figcaption>
       {!data ? <div className="asst-chart-loading" aria-hidden="true" />
         : empty ? <p className="asst-chart-note">{t("assistant.chartNoData")}</p>
+        : aiNothingToDraw ? <p className="asst-chart-note">{t("assistant.chartAllZero")}</p>
         : <div className="asst-chart-svg" role="img" aria-label={summary}>{draw(spec.type, data, fmt, records && !!result?.time)}</div>}
     </figure>
   );
@@ -59,7 +62,12 @@ const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…`
 
 /** Horizontal bars — categories. */
 function Bars({ data, fmt }: P) {
-  const rowH = 30, left = 86, right = 82, H = data.length * rowH + 4;
+  // Value column sized to the longest value; very long values switch to the short form (e.g. RM 1.2M).
+  const full = data.map((d) => fmt(d.value));
+  const longest = Math.max(...full.map((s) => s.length));
+  const useShort = longest * 7 + 8 > 130;
+  const vals = useShort ? data.map((d) => (full[0].startsWith("RM") || full[0].startsWith("−RM") ? `${d.value < 0 ? "−" : ""}RM ${short(Math.abs(d.value))}` : short(d.value))) : full;
+  const rowH = 30, left = 86, right = Math.min(Math.max(82, Math.max(...vals.map((s) => s.length)) * 7 + 8), 130), H = data.length * rowH + 4;
   const max = Math.max(...data.map((d) => Math.abs(d.value)), 1);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
@@ -70,7 +78,7 @@ function Bars({ data, fmt }: P) {
             <text x={left - 8} y={y + 15} textAnchor="end" className="c-label">{clip(d.label, 14)}</text>
             <rect x={left} y={y + 3} width={W - left - right} height={17} rx={5} className="c-track" />
             <rect x={left} y={y + 3} width={w} height={17} rx={5} style={{ fill: d.value < 0 ? "var(--red)" : PALETTE[0] }} />
-            <text x={W} y={y + 16} textAnchor="end" className="c-val">{fmt(d.value)}</text>
+            <text x={W} y={y + 16} textAnchor="end" className="c-val">{vals[i]}</text>
           </g>
         );
       })}
@@ -83,32 +91,44 @@ function niceMax(v: number) {
   const p = 10 ** Math.floor(Math.log10(v)), n = v / p;
   return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
 }
-const short = (v: number) => (Math.abs(v) >= 1e6 ? `${+(v / 1e6).toFixed(1)}M` : Math.abs(v) >= 1e3 ? `${+(v / 1e3).toFixed(1)}k` : `${+v.toFixed(1)}`);
+function short(v: number) {
+  const a = Math.abs(v), s = (d: number, u: string) => `${+(v / d).toFixed(1)}${u}`;
+  return a >= 1e12 ? s(1e12, "T") : a >= 1e9 ? s(1e9, "B") : a >= 1e6 ? s(1e6, "M") : a >= 1e3 ? s(1e3, "k") : `${+v.toFixed(1)}`;
+}
+/** Which x labels to draw: evenly spaced, always the last, never crowding the last. */
+const showLabel = (i: number, last: number, every: number) => i === last || (i % every === 0 && last - i >= every);
 
-/** Vertical columns — time buckets or many categories. */
+/** Vertical columns — time buckets or many categories (negative values drawn below zero). */
 function Columns({ data, fmt }: P) {
-  const H = 170, l = 38, r = 6, t = 18, b = 24;
-  const max = niceMax(Math.max(...data.map((d) => d.value), 0));
-  const y = (v: number) => t + (H - t - b) * (1 - Math.max(v, 0) / max);
+  const H = 170, l = 40, r = 6, t = 18, b = 24;
+  const lo0 = Math.min(0, ...data.map((d) => d.value)), hi0 = Math.max(0, ...data.map((d) => d.value));
+  const lo = lo0 < 0 ? -niceMax(-lo0) : 0, hi = hi0 > 0 ? niceMax(hi0) : 0;
+  const span = hi - lo || 1;
+  const y = (v: number) => t + (H - t - b) * (1 - (v - lo) / span);
   const step = (W - l - r) / data.length, bw = Math.min(28, step * 0.64);
   const every = Math.ceil(data.length / 7);
   const last = data.length - 1;
+  const ticks = lo < 0 ? [lo, 0, hi] : [0, hi / 2, hi];
+  const lastX = l + step * last + step / 2, lastV = data[last].value;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-      {[0, max / 2, max].map((v) => (
-        <g key={v}><line x1={l} x2={W - r} y1={y(v)} y2={y(v)} className="c-grid" /><text x={l - 6} y={y(v) + 4} textAnchor="end" className="c-label">{short(v)}</text></g>
+      {ticks.map((v, k) => (
+        <g key={k}><line x1={l} x2={W - r} y1={y(v)} y2={y(v)} className="c-grid" /><text x={l - 6} y={y(v) + 4} textAnchor="end" className="c-label">{short(v)}</text></g>
       ))}
       {data.map((d, i) => {
         const cx = l + step * i + step / 2;
+        const top = Math.min(y(0), y(d.value)), h = Math.max(Math.abs(y(d.value) - y(0)), 1);
         return (
           <g key={i}>
-            <rect x={cx - bw / 2} y={y(d.value)} width={bw} height={Math.max(y(0) - y(d.value), 1)} rx={4}
-              style={{ fill: PALETTE[0], opacity: i === last ? 1 : 0.55 }} />
-            {(i % every === 0 || i === last) && <text x={cx} y={H - 7} textAnchor="middle" className="c-label">{clip(d.label, 7)}</text>}
+            <rect x={cx - bw / 2} y={top} width={bw} height={h} rx={4}
+              style={{ fill: d.value < 0 ? "var(--red)" : PALETTE[0], opacity: i === last ? 1 : 0.55 }} />
+            {showLabel(i, last, every) && (
+              <text x={i === last ? Math.min(cx + bw / 2, W) : cx} y={H - 7} textAnchor={i === last && data.length > 1 ? "end" : "middle"} className="c-label">{clip(d.label, 7)}</text>
+            )}
           </g>
         );
       })}
-      <text x={Math.min(l + step * last + step / 2, W - 30)} y={Math.max(y(data[last].value) - 5, 11)} textAnchor="middle" className="c-val">{fmt(data[last].value)}</text>
+      <text x={Math.min(lastX + bw / 2, W)} y={lastV < 0 ? Math.min(y(lastV) + 14, H - b - 2) : Math.max(y(lastV) - 5, 11)} textAnchor="end" className="c-val">{fmt(lastV)}</text>
     </svg>
   );
 }
@@ -127,7 +147,9 @@ function Line({ data, fmt }: P) {
       {[lo, (lo + hi) / 2, hi].map((v) => (
         <g key={v}><line x1={l} x2={W - r} y1={y(v)} y2={y(v)} className="c-grid" /><text x={l - 6} y={y(v) + 4} textAnchor="end" className="c-label">{short(v)}</text></g>
       ))}
-      {data.map((d, i) => (i % every === 0 || i === last) && <text key={i} x={x(i)} y={H - 7} textAnchor="middle" className="c-label">{clip(d.label, 7)}</text>)}
+      {data.map((d, i) => showLabel(i, last, every) && (
+        <text key={i} x={i === last && data.length > 1 ? Math.min(x(i) + 4, W) : x(i)} y={H - 7} textAnchor={i === last && data.length > 1 ? "end" : "middle"} className="c-label">{clip(d.label, 7)}</text>
+      ))}
       <polygon points={`${x(0)},${y(lo)} ${pts} ${x(last)},${y(lo)}`} style={{ fill: PALETTE[0], opacity: 0.13 }} />
       <polyline points={pts} fill="none" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" style={{ stroke: PALETTE[0] }} />
       <circle cx={x(last)} cy={y(data[last].value)} r={4.5} style={{ fill: PALETTE[0] }} />
@@ -175,7 +197,7 @@ function Donut({ data, fmt }: P) {
 /** Stacked bar — status counts. */
 function Progress({ data, fmt }: P) {
   const parts = topParts(data, 6), total = parts.reduce((s, d) => s + d.value, 0) || 1;
-  const rows = Math.ceil(parts.length / 2), H = 44 + rows * 22;
+  const H = 44 + parts.length * 22;
   let x = 0;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
@@ -187,9 +209,10 @@ function Progress({ data, fmt }: P) {
         return el;
       })}
       {parts.map((d, i) => (
-        <g key={`l${i}`} transform={`translate(${(i % 2) * 160} ${54 + Math.floor(i / 2) * 22})`}>
+        <g key={`l${i}`} transform={`translate(0 ${54 + i * 22})`}>
           <rect y={-9} width={10} height={10} rx={3} style={{ fill: PALETTE[i % PALETTE.length] }} />
-          <text x={16} y={0} className="c-label">{clip(d.label, 14)} · {fmt(d.value)}</text>
+          <text x={16} y={0} className="c-label">{clip(d.label, 22)}</text>
+          <text x={W} y={0} textAnchor="end" className="c-val">{fmt(d.value)}</text>
         </g>
       ))}
     </svg>

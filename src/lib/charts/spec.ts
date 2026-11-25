@@ -15,7 +15,7 @@ import { MODULES, getModule, type ModuleDef } from "../../db/modules";
 
 export type ChartType = "bar" | "line" | "donut" | "progress";
 export const CHART_TYPES: ChartType[] = ["bar", "line", "donut", "progress"];
-export const PERIODS = ["this-month", "last-month", "last-3-months", "last-6-months", "last-12-months", "this-year", "all"] as const;
+export const PERIODS = ["this-week", "this-month", "last-month", "last-3-months", "last-6-months", "last-12-months", "this-year", "last-year", "all"] as const;
 export type Period = (typeof PERIODS)[number];
 export const TIME_GROUPS = ["month", "week"] as const;
 
@@ -37,7 +37,7 @@ export type ChartSpec =
 export const MAX_POINTS = 24;
 const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
 
-/** The module's date field used for periods and month/week grouping (falls back to createdAt). */
+/** The module's date field used for periods and month/week grouping (records without one use createdAt). */
 export function dateFieldOf(m: ModuleDef): string | undefined {
   return m.fields.find((f) => f.type === "date")?.key;
 }
@@ -74,7 +74,10 @@ function validQuery(q: unknown): RecordsQuery | null {
       where[k] = String(v);
     }
   }
-  const period = (PERIODS as readonly string[]).includes(String(o.period)) ? (o.period as Period) : "all";
+  // Missing period means "all"; an unknown one is rejected (never silently widened to all-time).
+  const hasPeriod = o.period !== undefined && o.period !== null && o.period !== "";
+  if (hasPeriod && !(PERIODS as readonly string[]).includes(String(o.period))) return null;
+  const period: Period = hasPeriod ? (o.period as Period) : "all";
   return { module: m.id, measure, field, groupBy, where, period };
 }
 
@@ -84,7 +87,9 @@ function validData(d: unknown): DataPoint[] | null {
   for (const p of d) {
     if (!p || typeof p !== "object") return null;
     const label = str((p as Record<string, unknown>).label, 40);
-    const value = Number((p as Record<string, unknown>).value);
+    // Numbers only: null, booleans, arrays and empty strings are rejected (not turned into 0/1).
+    const rv = (p as Record<string, unknown>).value;
+    const value = typeof rv === "number" ? rv : typeof rv === "string" && rv.trim() !== "" ? Number(rv) : NaN;
     if (!label || !Number.isFinite(value) || Math.abs(value) > 1e12) return null;
     out.push({ label, value });
   }
@@ -102,7 +107,9 @@ export function parseChartSpec(raw: string): ChartSpec | null {
   const unit = str(o.unit, 8);
   if (o.source === "records") {
     const query = validQuery(o.query);
-    return query ? { type, title, unit, source: "records", query } : null;
+    if (!query) return null;
+    const keepUnit = query.measure === "sum" && unit && unit.toUpperCase() !== "RM" ? unit : undefined;
+    return { type, title, unit: keepUnit, source: "records", query };
   }
   if (o.source === "ai" || o.data) {
     const data = validData(o.data);
@@ -114,21 +121,27 @@ export function parseChartSpec(raw: string): ChartSpec | null {
 
 export type Segment = { kind: "text"; text: string } | { kind: "chart"; raw: string } | { kind: "pending" };
 
-/** Split an answer into text and ```chart blocks. An unfinished block (still streaming) becomes "pending". */
-export function splitMessage(content: string): Segment[] {
+/**
+ * Split an answer into text and ```chart blocks. The fence must start a line; the JSON may
+ * start on the fence line. An unfinished block is "pending" while streaming; once the reply
+ * has ended (finished, stopped or cut off) it is parsed as-is, so it never spins forever.
+ */
+export function splitMessage(content: string, streaming = false): Segment[] {
   const out: Segment[] = [];
-  const re = /```chart[^\n]*\n([\s\S]*?)```/g;
+  const re = /(^|\n)[ \t]*```chart[ \t]*\n?([\s\S]*?)```/g;
   let last = 0;
   for (let m = re.exec(content); m; m = re.exec(content)) {
-    if (m.index > last) out.push({ kind: "text", text: content.slice(last, m.index) });
-    out.push({ kind: "chart", raw: m[1] });
+    const start = m.index + m[1].length;
+    if (start > last) out.push({ kind: "text", text: content.slice(last, start) });
+    out.push({ kind: "chart", raw: m[2] });
     last = m.index + m[0].length;
   }
   const rest = content.slice(last);
-  const open = rest.search(/```chart/);
+  const open = rest.search(/(^|\n)[ \t]*```chart/);
   if (open >= 0) {
-    if (open > 0) out.push({ kind: "text", text: rest.slice(0, open) });
-    out.push({ kind: "pending" });
+    const at = rest[open] === "\n" ? open + 1 : open;
+    if (at > 0) out.push({ kind: "text", text: rest.slice(0, at) });
+    out.push(streaming ? { kind: "pending" } : { kind: "chart", raw: rest.slice(at).replace(/^[ \t]*```chart[ \t]*\n?/, "") });
   } else if (rest) out.push({ kind: "text", text: rest });
   return out
     .map((s) => (s.kind === "text" ? { ...s, text: s.text.replace(/^\n+|\n+$/g, "") } : s))
@@ -154,6 +167,9 @@ Rules:
 - Use source "ai" only for things not in the records (estimates, forecasts, general knowledge), with "data":[{"label":"…","value":number}] (max ${MAX_POINTS} points) and an optional "unit" such as "kg". These are shown to the farmer as an estimate.
 - Use dropdown values exactly as listed (they are stored in English) in "where". Money amounts are Malaysian ringgit.
 - "bar" for categories (or months), "line" for trends over time, "donut" for parts of a whole (max 6 parts), "progress" for status counts.
+- Use "period" only with the values listed (omit it for all time). Group by "week" only with this-week, this-month, last-month or last-3-months; use "month" for longer periods.
+- groupBy must be a dropdown, text or date field (not a number or long-text field). Records without a date count by the day they were entered.
+- Leave "unit" out for records charts; the app knows the units.
 - Valid JSON only, no comments. Write titles in the reply language.
 
 Modules and fields:

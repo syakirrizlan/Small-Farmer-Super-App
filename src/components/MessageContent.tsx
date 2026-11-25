@@ -3,9 +3,9 @@ import { useI18n } from "../i18n";
 import ChartBlock from "./ChartView";
 
 /** Assistant message: plain text with any ```chart blocks drawn as real charts. */
-export default function MessageContent({ content }: { content: string }) {
+export default function MessageContent({ content, streaming = false }: { content: string; streaming?: boolean }) {
   const { t } = useI18n();
-  const segments = splitMessage(content);
+  const segments = splitMessage(content, streaming);
   if (segments.length === 1 && segments[0].kind === "text") return <>{segments[0].text}</>;
   return (
     <>

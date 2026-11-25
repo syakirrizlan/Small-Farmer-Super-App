@@ -137,6 +137,7 @@ const ms: Dict = {
     chartError: "Carta ini tidak dapat dilukis.",
     chartOther: "Lain-lain",
     chartNone: "(tiada)",
+    chartAllZero: "Semua nilai ialah 0.",
     chartTotal: "Jumlah",
     title: "Pembantu",
     using: "Menggunakan",
