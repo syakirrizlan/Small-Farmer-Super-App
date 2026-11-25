@@ -141,3 +141,22 @@
   .asst-dots i { animation: none; opacity: .7; }
   .asst-row { animation: none; }
 }
+
+/* ---------- Charts inside assistant answers ---------- */
+.bubble.assistant:has(.asst-chart) { width: min(100%, 520px); max-width: 92%; }
+.asst-text { display: block; white-space: pre-wrap; }
+.asst-text + .asst-chart, .asst-chart + .asst-text, .asst-chart + .asst-chart { margin-top: 10px; }
+.asst-chart { margin: 0; background: var(--bg-elevated-2); border-radius: 14px; padding: 12px 12px 8px; white-space: normal; }
+.asst-chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.asst-chart-title { font: 600 15px/20px var(--font); color: var(--label); min-width: 0; }
+.asst-chart .badge { white-space: nowrap; }
+.asst-chart-svg svg { display: block; width: 100%; height: auto; overflow: visible; }
+.asst-chart .c-label { fill: var(--label-2); font: 400 12px var(--font); }
+.asst-chart .c-val { fill: var(--label); font: 600 12px var(--font-rounded); font-variant-numeric: tabular-nums; }
+.asst-chart .c-grid { stroke: var(--separator); stroke-width: 1; }
+.asst-chart .c-track { fill: var(--fill); }
+.asst-chart-loading { height: 120px; border-radius: 10px; background: var(--fill); }
+.asst-chart-note { margin: 8px 0 0; font: 400 13px/18px var(--font); color: var(--label-2); white-space: normal; }
+.asst-chart-pending { display: flex; align-items: center; gap: 8px; }
+.asst-chart-pending::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--fill-strong); border-top-color: var(--tint); animation: asst-spin .8s linear infinite; }
+@keyframes asst-spin { to { transform: rotate(360deg); } }

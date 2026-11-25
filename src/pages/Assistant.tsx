@@ -8,6 +8,7 @@ import Icon, { type IconName } from "../components/Icon";
 import { useI18n, type TKey } from "../i18n";
 import { providerName } from "../i18n/labels";
 import { getModule } from "../db/modules";
+import MessageContent from "../components/MessageContent";
 
 type Tile = CSSProperties & { "--tile"?: string };
 
@@ -161,7 +162,7 @@ export default function Assistant() {
                   <div className={`bubble ${turn.role}${typing ? " typing" : ""}`}>
                     {typing
                       ? <><span className="asst-dots" aria-hidden="true"><i /><i /><i /></span><span className="sr-only">{t("assistant.thinking")}</span></>
-                      : turn.content}
+                      : turn.role === "assistant" ? <MessageContent content={turn.content} streaming={busy && i === turns.length - 1} /> : turn.content}
                   </div>
                 </div>
               );

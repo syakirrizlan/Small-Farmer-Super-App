@@ -130,6 +130,15 @@ const ms: Dict = {
   },
 
   assistant: {
+    chartFromRecords: "Daripada rekod anda",
+    chartEstimate: "Anggaran AI",
+    chartPreparing: "Menyediakan carta…",
+    chartNoData: "Belum ada rekod yang sepadan.",
+    chartError: "Carta ini tidak dapat dilukis.",
+    chartOther: "Lain-lain",
+    chartNone: "(tiada)",
+    chartAllZero: "Semua nilai ialah 0.",
+    chartTotal: "Jumlah",
     title: "Pembantu",
     using: "Menggunakan",
     change: "Tukar",

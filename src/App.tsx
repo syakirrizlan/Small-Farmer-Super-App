@@ -88,7 +88,7 @@ export default function App() {
         <ScrollToTop />
         <aside className="sidebar">
           <div className="sidebar-brand">
-            <span className="tile tile-lg"><Icon name="leaf" /></span>
+            <img className="app-mark" src="/icons/icon.svg" alt="" width={44} height={44} />
             <span className="cell-body">
               <span className="t-headline">{t("app.brand")}</span>
               <span className="t-footnote muted">{t("app.tagline")}</span>
