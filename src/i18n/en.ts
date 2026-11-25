@@ -137,6 +137,17 @@ const en = {
   },
 
   assistant: {
+    micStart: "Speak your question",
+    listeningShort: "Listening…",
+    micStop: "Stop listening",
+    listening: "Listening… speak now, then tap the microphone to stop.",
+    micDenied: "Microphone access is blocked. Allow it in the browser's site settings, then try again.",
+    noMic: "No microphone was found.",
+    speechNetwork: "Voice typing needs an internet connection.",
+    noSpeech: "Didn't catch that. Tap the microphone and try again.",
+    speechLang: "Voice typing isn't available for this language in your browser.",
+    speechFailed: "Voice typing stopped unexpectedly. Please try again.",
+    voiceNote: "Voice typing uses your browser's speech service (Google in Chrome, Microsoft in Edge) to turn speech into text.",
     chartFromRecords: "From your records",
     chartEstimate: "Estimate by AI",
     chartPreparing: "Preparing chart…",
