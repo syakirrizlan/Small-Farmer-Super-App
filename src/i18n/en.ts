@@ -137,6 +137,14 @@ const en = {
   },
 
   assistant: {
+    chartFromRecords: "From your records",
+    chartEstimate: "Estimate by AI",
+    chartPreparing: "Preparing chart…",
+    chartNoData: "No matching records yet.",
+    chartError: "This chart couldn't be drawn.",
+    chartOther: "Other",
+    chartNone: "(none)",
+    chartTotal: "Total",
     title: "Assistant",
     using: "Using",
     change: "Change",

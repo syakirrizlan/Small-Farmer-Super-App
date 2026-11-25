@@ -6,6 +6,7 @@ import { getAiSettings, resolve } from "./settings";
 import { getProviderKey, peekProviderKey, vaultReady } from "./vault";
 import { SYSTEM, farmSnapshot, languageInstruction, type ChatTurn } from "./llm/context";
 import { providerName } from "../i18n/labels";
+import { chartInstructions } from "./charts/spec";
 import type { ProviderDef } from "./providers";
 
 export type { ChatTurn };
@@ -18,7 +19,7 @@ export async function streamChat(history: ChatTurn[], onText: (delta: string) =>
   const { provider, model, baseURL } = resolve(await getAiSettings());
   await vaultReady();
   const apiKey = keyFor(provider);
-  const system = `${SYSTEM}\n${languageInstruction()}\n\n${await farmSnapshot()}`;
+  const system = `${SYSTEM}\n${languageInstruction()}\n\n${chartInstructions()}\n\n${await farmSnapshot()}`;
   const req = { model, baseURL, apiKey, system, history, onText, signal };
 
   if (provider.kind === "anthropic") {

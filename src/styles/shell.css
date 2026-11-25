@@ -73,3 +73,7 @@
 .sidebar-foot .install-btn { width: 100%; justify-content: flex-start; }
 .sidebar-foot .lang-toggle { align-self: stretch; padding: 2px; }
 .sidebar-foot .lang-toggle button { flex: 1; min-height: 40px; } /* 40 + 2px track = 44px band */
+
+/* The real app icon (sidebar brand, About row). */
+.app-mark { width: 44px; height: 44px; border-radius: 11px; flex-shrink: 0; display: block; }
+.app-mark.sm { width: 30px; height: 30px; border-radius: 7px; }

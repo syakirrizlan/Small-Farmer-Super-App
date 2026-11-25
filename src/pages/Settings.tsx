@@ -102,7 +102,7 @@ export default function Settings() {
         <h2 className="section-title">{t("settings.about")}</h2>
         <ul className="group">
           <li className="cell">
-            <span className="tile" style={tile("var(--tint)")}><Icon name="leaf" /></span>
+            <img className="app-mark sm" src="/icons/icon.svg" alt="" width={30} height={30} />
             <span className="cell-body">
               <span className="cell-title">{t("app.brand")}</span>
               <span className="cell-sub">{t("app.tagline")}</span>
